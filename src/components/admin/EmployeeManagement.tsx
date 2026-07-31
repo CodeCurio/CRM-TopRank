@@ -2,9 +2,10 @@ import React, { useState, useRef } from 'react';
 import { 
   UserPlus, UserMinus, ShieldCheck, Mail, Briefcase, Phone, Save, X, Activity, 
   Upload, CreditCard, Eye, EyeOff, CheckCircle, Copy, Printer, Lock, FileText, 
-  Building2, Key, Sparkles, Image as ImageIcon 
+  Building2, Key, Sparkles, Image as ImageIcon, RefreshCw, KeyRound
 } from 'lucide-react';
 import { Employee, AdminRole, Department } from '../../types';
+import { resetEmployeePassword } from '../../lib/api';
 
 interface EmployeeManagementProps {
   employees: Employee[];
@@ -31,9 +32,32 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
   // Toggles for sensitive fields
   const [showPassword, setShowPassword] = useState(false);
   const [showAadhaar, setShowAadhaar] = useState<Record<string, boolean>>({});
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedCredentials, setCopiedCredentials] = useState(false);
+
+  // New employee created credentials modal
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    name: string;
+    email: string;
+    password: string;
+  } | null>(null);
+
+  // Reset password modal state
+  const [resetModalEmp, setResetModalEmp] = useState<Employee | null>(null);
+  const [newResetPassword, setNewResetPassword] = useState<string>('');
+  const [showResetPasswordInput, setShowResetPasswordInput] = useState<boolean>(true);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$';
+    let pass = 'TR@';
+    for (let i = 0; i < 6; i++) {
+      pass += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pass;
+  };
 
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({
     name: '',
@@ -43,7 +67,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
     phone: '',
     aadhaarNumber: '',
     panNumber: '',
-    password: 'Password@123',
+    password: generateRandomPassword(),
     isAdmin: false,
     adminRole: 'Co-Founder',
     hourlyRate: 1000,
@@ -71,16 +95,18 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       return;
     }
 
+    const assignedPassword = newEmployee.password || generateRandomPassword();
+
     const emp: Employee = {
       id: `emp-${Date.now()}`,
       name: newEmployee.name!,
-      email: newEmployee.email!,
+      email: newEmployee.email!.trim().toLowerCase(),
       role: newEmployee.role!,
       department: newEmployee.department || 'Development',
       phone: newEmployee.phone || '',
       aadhaarNumber: newEmployee.aadhaarNumber || '',
       panNumber: (newEmployee.panNumber || '').toUpperCase(),
-      password: newEmployee.password || 'Password@123',
+      password: assignedPassword,
       avatar: newEmployee.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
       status: 'offline',
       activeSecondsToday: 0,
@@ -94,6 +120,14 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
     };
 
     onAddEmployee(emp);
+
+    // Show popup modal with created ID and password
+    setCreatedCredentials({
+      name: emp.name,
+      email: emp.email,
+      password: assignedPassword,
+    });
+
     setShowAddForm(false);
     setNewEmployee({
       name: '',
@@ -103,12 +137,42 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       phone: '',
       aadhaarNumber: '',
       panNumber: '',
-      password: 'Password@123',
+      password: generateRandomPassword(),
       isAdmin: false,
       adminRole: 'Co-Founder',
       hourlyRate: 1000,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
     });
+  };
+
+  const handleCopyCredentials = (email: string, pass: string) => {
+    const text = `TopRank India CRM Login Credentials:\nEmail: ${email}\nPassword: ${pass}\nPortal: ${window.location.origin}`;
+    navigator.clipboard.writeText(text);
+    setCopiedCredentials(true);
+    setTimeout(() => setCopiedCredentials(false), 3000);
+  };
+
+  const handleExecutePasswordReset = async () => {
+    if (!resetModalEmp || !newResetPassword) {
+      alert("Please enter a valid new password.");
+      return;
+    }
+
+    setIsResetting(true);
+    setResetSuccessMsg('');
+    try {
+      await resetEmployeePassword(resetModalEmp.email, newResetPassword);
+      setResetSuccessMsg(`Password for ${resetModalEmp.name} updated successfully in Supabase Auth!`);
+      setTimeout(() => {
+        setResetModalEmp(null);
+        setNewResetPassword('');
+        setResetSuccessMsg('');
+      }, 2000);
+    } catch (err: any) {
+      alert(`Failed to update password: ${err?.message || err}`);
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -290,23 +354,38 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
 
             {/* Portal Password */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Portal Password *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase flex items-center gap-1">
+                  <KeyRound size={13} className="text-blue-600" />
+                  <span>Login Password (ID / PASS) *</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setNewEmployee({ ...newEmployee, password: generateRandomPassword() })}
+                  className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
+                >
+                  <RefreshCw size={11} />
+                  Auto-Generate
+                </button>
+              </div>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={newEmployee.password}
+                  value={newEmployee.password || ''}
                   onChange={(e) => setNewEmployee({ ...newEmployee, password: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 font-mono rounded-xl px-3 py-2 pr-10 text-sm focus:outline-none focus:border-blue-500"
-                  placeholder="Password@123"
+                  className="w-full bg-slate-50 border border-slate-300 font-mono rounded-xl px-3 py-2 pr-10 text-sm font-semibold focus:outline-none focus:border-blue-500"
+                  placeholder="Set Password (e.g. TR@94821)"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  title={showPassword ? 'Hide Password' : 'Show Password'}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <p className="text-[10px] text-slate-500 mt-1">This password will be assigned for the employee to sign in.</p>
             </div>
 
             {/* Hourly Billing Rate */}
@@ -499,17 +578,33 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                   </td>
 
                   <td className="px-4 py-3.5 text-right align-middle">
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to remove ${emp.name}?`)) {
-                          onRemoveEmployee(emp.id);
-                        }
-                      }}
-                      className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 rounded-xl transition-colors"
-                      title="Remove Employee"
-                    >
-                      <UserMinus size={16} />
-                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => {
+                          setResetModalEmp(emp);
+                          setNewResetPassword(generateRandomPassword());
+                          setShowResetPasswordInput(true);
+                          setResetSuccessMsg('');
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-xl transition-colors flex items-center gap-1 text-xs font-semibold"
+                        title="Manage / Reset Login Password"
+                      >
+                        <Key size={15} />
+                        <span className="hidden lg:inline text-[11px]">Pass</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to remove ${emp.name}?`)) {
+                            onRemoveEmployee(emp.id);
+                          }
+                        }}
+                        className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 rounded-xl transition-colors"
+                        title="Remove Employee"
+                      >
+                        <UserMinus size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -522,6 +617,157 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
           )}
         </div>
       </div>
+
+      {/* Created Credentials Success Modal */}
+      {createdCredentials && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Employee Registered!</h3>
+                  <p className="text-xs text-slate-500">ID & Password generated for {createdCredentials.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCreatedCredentials(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Employee Name</span>
+                <span className="text-sm font-bold text-slate-800">{createdCredentials.name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Login Email ID</span>
+                <span className="text-sm font-mono font-semibold text-blue-700">{createdCredentials.email}</span>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Assigned Password</span>
+                <span className="text-sm font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200 inline-block mt-0.5">
+                  {createdCredentials.password}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => handleCopyCredentials(createdCredentials.email, createdCredentials.password)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-md"
+              >
+                {copiedCredentials ? <CheckCircle size={16} /> : <Copy size={16} />}
+                {copiedCredentials ? 'Credentials Copied to Clipboard!' : 'Copy Login Credentials'}
+              </button>
+
+              <button
+                onClick={() => setCreatedCredentials(null)}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-xs transition-colors"
+              >
+                Done / Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal for Master Admin */}
+      {resetModalEmp && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Reset Employee Password</h3>
+                  <p className="text-xs text-slate-500">Update login password for {resetModalEmp.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setResetModalEmp(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-5">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                <div className="text-xs text-slate-500">Employee Email</div>
+                <div className="font-mono text-sm font-bold text-slate-800">{resetModalEmp.email}</div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">New Password *</label>
+                  <button
+                    type="button"
+                    onClick={() => setNewResetPassword(generateRandomPassword())}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 hover:underline"
+                  >
+                    <RefreshCw size={11} />
+                    Auto-Generate
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type={showResetPasswordInput ? 'text' : 'password'}
+                    value={newResetPassword}
+                    onChange={(e) => setNewResetPassword(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 font-mono rounded-xl px-3 py-2 pr-10 text-sm font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPasswordInput(!showResetPasswordInput)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  >
+                    {showResetPasswordInput ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              {resetSuccessMsg && (
+                <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+                  <span>{resetSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setResetModalEmp(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleExecutePasswordReset}
+                disabled={isResetting}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
+              >
+                {isResetting ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Save size={14} />
+                )}
+                {isResetting ? 'Updating...' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

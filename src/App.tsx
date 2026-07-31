@@ -192,8 +192,17 @@ export default function App() {
 
   // Handle Add Employee
   const handleAddEmployee = async (emp: Employee) => {
-    setEmployees([emp, ...employees]);
-    try { await saveEmployee(emp); } catch (e) {}
+    try {
+      const saved = await saveEmployee(emp);
+      if (saved) {
+        setEmployees((prev) => [saved, ...prev.filter((e) => e.id !== emp.id && e.email !== saved.email)]);
+      } else {
+        setEmployees((prev) => [emp, ...prev.filter((e) => e.id !== emp.id)]);
+      }
+    } catch (e) {
+      console.error('Failed to save employee:', e);
+      setEmployees((prev) => [emp, ...prev.filter((e) => e.id !== emp.id)]);
+    }
   };
 
   // Handle Remove Employee

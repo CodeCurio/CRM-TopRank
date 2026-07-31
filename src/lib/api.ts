@@ -63,46 +63,45 @@ export const seedDatabase = async () => {
   }
 };
 
-export const saveEmployee = async (employee: Employee) => {
-  // First, create the user in Supabase Auth using Admin API if they don't exist
-  if (employee.email && employee.password) {
+export const saveEmployee = async (employee: Employee): Promise<Employee> => {
+  const cleanEmail = employee.email ? employee.email.trim().toLowerCase() : '';
+  
+  // First, create or update the user in Supabase Auth using Admin API
+  if (cleanEmail && employee.password) {
     try {
       const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
       if (listError) throw listError;
 
-      const existingUser = usersData.users.find((u: any) => u.email === employee.email);
+      const existingUser = usersData.users.find((u: any) => u.email?.toLowerCase() === cleanEmail);
 
       if (!existingUser) {
         const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-          email: employee.email,
+          email: cleanEmail,
           password: employee.password,
           email_confirm: true,
         });
         
         if (createError) throw createError;
         
-        // Ensure the employee ID matches the newly created auth user ID
         if (newUser.user) {
           employee.id = newUser.user.id;
         }
       } else {
-        // If updating an existing employee and their ID is an old mock ID, update it to auth ID
         if (employee.id.startsWith('emp-')) {
           employee.id = existingUser.id;
         }
         
-        // Optional: Update password if changed
+        // Update password in Supabase Auth
         await supabase.auth.admin.updateUserById(existingUser.id, {
-          password: employee.password
+          password: employee.password,
         });
       }
     } catch (err) {
       console.error('Error creating/updating Auth user:', err);
-      // Fallback: continue saving to employee table anyway, though login might fail
     }
   }
 
-  const employeePayload = { ...employee };
+  const employeePayload = { ...employee, email: cleanEmail };
   delete employeePayload.password;
   delete employeePayload.adminRole;
   delete employeePayload.aadhaarNumber;
@@ -113,6 +112,33 @@ export const saveEmployee = async (employee: Employee) => {
   if (error) {
     console.error('Error saving employee to database:', error);
     throw error;
+  }
+
+  return employee;
+};
+
+export const resetEmployeePassword = async (email: string, newPassword: string) => {
+  const cleanEmail = email.trim().toLowerCase();
+  const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
+  if (listError) throw listError;
+
+  const existingUser = usersData.users.find((u: any) => u.email?.toLowerCase() === cleanEmail);
+  if (!existingUser) {
+    // Create if user doesn't exist yet in Auth
+    const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+      email: cleanEmail,
+      password: newPassword,
+      email_confirm: true,
+    });
+    if (createError) throw createError;
+    return newUser.user;
+  } else {
+    // Update password
+    const { data, error } = await supabase.auth.admin.updateUserById(existingUser.id, {
+      password: newPassword,
+    });
+    if (error) throw error;
+    return data.user;
   }
 };
 
