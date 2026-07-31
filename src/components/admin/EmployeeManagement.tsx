@@ -2,10 +2,10 @@ import React, { useState, useRef } from 'react';
 import { 
   UserPlus, UserMinus, ShieldCheck, Mail, Briefcase, Phone, Save, X, Activity, 
   Upload, CreditCard, Eye, EyeOff, CheckCircle, Copy, Printer, Lock, FileText, 
-  Building2, Key, Sparkles, Image as ImageIcon, RefreshCw, KeyRound
+  Building2, Key, Sparkles, Image as ImageIcon, RefreshCw, KeyRound, Trash2
 } from 'lucide-react';
 import { Employee, AdminRole, Department } from '../../types';
-import { resetEmployeePassword } from '../../lib/api';
+import { resetEmployeePassword, isMasterAdminEmail } from '../../lib/api';
 
 interface EmployeeManagementProps {
   employees: Employee[];
@@ -47,6 +47,8 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
   const [showResetPasswordInput, setShowResetPasswordInput] = useState<boolean>(true);
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string>('');
+  const [confirmDeleteEmp, setConfirmDeleteEmp] = useState<Employee | null>(null);
+  const [adminDeleteNotice, setAdminDeleteNotice] = useState<string>('');
 
   // View Document Modal state
   const [viewDocModal, setViewDocModal] = useState<{
@@ -759,9 +761,12 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
 
                       <button
                         onClick={() => {
-                          if (window.confirm(`Are you sure you want to remove ${emp.name}?`)) {
-                            onRemoveEmployee(emp.id);
+                          if (isMasterAdminEmail(emp.email)) {
+                            setAdminDeleteNotice(`Master Admin account (${emp.email}) cannot be deleted.`);
+                            return;
                           }
+                          setAdminDeleteNotice('');
+                          setConfirmDeleteEmp(emp);
                         }}
                         className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 p-2 rounded-xl transition-colors"
                         title="Remove Employee"
@@ -986,6 +991,83 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                 No document image attached.
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Staff Deletion Modal */}
+      {confirmDeleteEmp && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center">
+                  <UserMinus size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Remove Employee</h3>
+                  <p className="text-xs text-slate-500">Confirm staff removal from TopRank system</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setConfirmDeleteEmp(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="bg-rose-50/50 p-4 rounded-xl border border-rose-100 mb-5 space-y-2">
+              <p className="text-xs font-medium text-slate-800">
+                Are you sure you want to permanently remove <strong className="text-slate-900 font-bold">{confirmDeleteEmp.name}</strong>?
+              </p>
+              <div className="text-[11px] font-mono text-slate-600 bg-white p-2 rounded border border-rose-200/60">
+                Email: <span className="font-bold text-rose-700">{confirmDeleteEmp.email}</span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                This will delete their employee record and revoke their access.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteEmp(null)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onRemoveEmployee(confirmDeleteEmp.id);
+                  setConfirmDeleteEmp(null);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                Confirm Remove Staff
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Protected Notice Modal */}
+      {adminDeleteNotice && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 text-center">
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
+              <ShieldCheck size={26} />
+            </div>
+            <h3 className="font-bold text-slate-900 text-base mb-1">Protected Account</h3>
+            <p className="text-xs text-slate-600 mb-5">{adminDeleteNotice}</p>
+            <button
+              onClick={() => setAdminDeleteNotice('')}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs transition-all shadow-md"
+            >
+              Understand & Close
+            </button>
           </div>
         </div>
       )}

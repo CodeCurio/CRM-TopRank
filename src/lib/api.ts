@@ -13,6 +13,18 @@ import {
   INITIAL_LEDGER,
 } from '../data/mockData';
 
+export const MASTER_ADMIN_EMAILS = [
+  'arnav@toprankindia.com',
+  'toprankdigitalservice@gmail.com',
+  'admin@toprankindia.com',
+];
+
+export const isMasterAdminEmail = (email?: string): boolean => {
+  if (!email) return false;
+  const clean = email.trim().toLowerCase();
+  return MASTER_ADMIN_EMAILS.includes(clean) || clean.startsWith('admin@');
+};
+
 // Fetch all data
 export const fetchAllData = async () => {
   const [
@@ -35,8 +47,84 @@ export const fetchAllData = async () => {
     supabase.from('ledger').select('*').order('date', { ascending: false })
   ]);
 
+  let employeeList: Employee[] = employees || [];
+
+  // Sync Supabase Auth users to ensure all registered employees appear in Manage Staff
+  try {
+    const { data: usersData } = await supabase.auth.admin.listUsers();
+    if (usersData?.users && usersData.users.length > 0) {
+      for (const u of usersData.users) {
+        if (!u.email) continue;
+        const cleanEmail = u.email.trim().toLowerCase();
+        const existingIndex = employeeList.findIndex(
+          (e) => e.id === u.id || e.email.toLowerCase() === cleanEmail
+        );
+
+        const isAdmin = isMasterAdminEmail(cleanEmail);
+
+        if (existingIndex === -1) {
+          const rawName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ');
+          const formattedName = rawName
+            .split(' ')
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+
+          const newEmp: Employee = {
+            id: u.id,
+            name: formattedName || 'TopRank Staff',
+            email: cleanEmail,
+            role: isAdmin ? 'Master Admin' : 'Executive Specialist',
+            department: isAdmin ? 'Management' : 'Operations',
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName || 'Staff')}&background=0D8ABC&color=fff`,
+            phone: '',
+            status: 'active',
+            activeSecondsToday: 0,
+            lastPunchIn: '09:00 AM',
+            hourlyRate: 1000,
+            completedTasksCount: 0,
+            pendingTasksCount: 0,
+            productivityScore: 100,
+            isAdmin: isAdmin,
+            adminRole: isAdmin ? 'Founder' : undefined,
+          };
+
+          const cleanPayload = {
+            id: newEmp.id,
+            name: newEmp.name,
+            email: cleanEmail,
+            role: newEmp.role,
+            department: newEmp.department,
+            avatar: newEmp.avatar,
+            phone: '',
+            status: 'active',
+            activeSecondsToday: 0,
+            lastPunchIn: '09:00 AM',
+            hourlyRate: 1000,
+            completedTasksCount: 0,
+            pendingTasksCount: 0,
+            productivityScore: 100,
+            isAdmin: newEmp.isAdmin,
+          };
+
+          await supabase.from('employees').upsert(cleanPayload);
+          employeeList.push(newEmp);
+        } else {
+          // If master admin email, force isAdmin = true
+          if (isAdmin && !employeeList[existingIndex].isAdmin) {
+            employeeList[existingIndex].isAdmin = true;
+            employeeList[existingIndex].role = 'Master Admin';
+            employeeList[existingIndex].adminRole = 'Founder';
+            await supabase.from('employees').update({ isAdmin: true, role: 'Master Admin' }).eq('id', employeeList[existingIndex].id);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing auth users in fetchAllData:', err);
+  }
+
   return {
-    employees: employees || [],
+    employees: employeeList,
     projects: projects || [],
     tasks: tasks || [],
     invoices: invoices || [],
@@ -153,8 +241,29 @@ export const resetEmployeePassword = async (email: string, newPassword: string) 
   }
 };
 
-export const deleteEmployee = async (id: string) => {
+export const deleteEmployee = async (id: string, email?: string) => {
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
+
+  // Delete from employees table
   await supabase.from('employees').delete().eq('id', id);
+  if (cleanEmail) {
+    await supabase.from('employees').delete().ilike('email', cleanEmail);
+  }
+
+  // Delete from Supabase Auth so fetchAllData won't resurrect them
+  try {
+    const { data: usersData } = await supabase.auth.admin.listUsers();
+    if (usersData?.users) {
+      const match = usersData.users.find(
+        (u: any) => u.id === id || (cleanEmail && u.email?.toLowerCase() === cleanEmail)
+      );
+      if (match) {
+        await supabase.auth.admin.deleteUser(match.id);
+      }
+    }
+  } catch (err) {
+    console.error('Error deleting employee from Auth:', err);
+  }
 };
 
 export const saveProject = async (project: Project) => {

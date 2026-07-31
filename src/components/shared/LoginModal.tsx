@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ShieldCheck, UserCheck, X, ArrowRight, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Employee } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
+import { isMasterAdminEmail } from '../../lib/api';
 
 interface LoginModalProps {
   employees: Employee[];
@@ -130,6 +131,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           }
         }
 
+        if (empData) {
+          if (isMasterAdminEmail(cleanEmail)) {
+            empData.isAdmin = true;
+            empData.adminRole = 'Founder';
+          }
+        }
+
         // 4. Auto-provision profile if still not found in employees table
         if (!empData) {
           const rawName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ');
@@ -138,11 +146,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
             .join(' ');
 
-          const isTopRankAdmin =
-            cleanEmail === 'toprankdigitalservice@gmail.com' ||
-            cleanEmail === 'arnav@toprankindia.com' ||
-            cleanEmail.endsWith('@toprankindia.com') ||
-            cleanEmail.startsWith('admin@');
+          const isTopRankAdmin = isMasterAdminEmail(cleanEmail);
 
           empData = {
             id: authUser.id,

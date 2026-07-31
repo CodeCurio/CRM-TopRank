@@ -36,7 +36,8 @@ import { LoginModal } from './components/shared/LoginModal';
 import { getInvoiceUrgency } from './utils/formatters';
 import { 
   fetchAllData, seedDatabase, saveEmployee, deleteEmployee, saveProject, saveTask, 
-  saveInvoice, deleteInvoice, saveLedgerEntry, saveDiscussion, saveMeeting 
+  saveInvoice, deleteInvoice, saveLedgerEntry, saveDiscussion, saveMeeting,
+  isMasterAdminEmail
 } from './lib/api';
 
 export default function App() {
@@ -89,6 +90,13 @@ export default function App() {
             (e) => e.id === session.user.id || e.email.toLowerCase() === sessionEmail
           ) || null;
 
+          if (found) {
+            if (isMasterAdminEmail(found.email)) {
+              found.isAdmin = true;
+              found.adminRole = 'Founder';
+            }
+          }
+
           if (!found && sessionEmail) {
             // Auto-provision profile for active session if missing from database list
             const rawName = sessionEmail.split('@')[0].replace(/[._-]/g, ' ');
@@ -97,11 +105,7 @@ export default function App() {
               .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
               .join(' ');
 
-            const isTopRankAdmin =
-              sessionEmail === 'toprankdigitalservice@gmail.com' ||
-              sessionEmail === 'arnav@toprankindia.com' ||
-              sessionEmail.endsWith('@toprankindia.com') ||
-              sessionEmail.startsWith('admin@');
+            const isTopRankAdmin = isMasterAdminEmail(sessionEmail);
 
             const newProfile: Employee = {
               id: session.user.id,
@@ -140,9 +144,16 @@ export default function App() {
         }
 
         if (found) {
+          if (isMasterAdminEmail(found.email)) {
+            found.isAdmin = true;
+            found.adminRole = 'Founder';
+          }
           setCurrentEmployee(found);
           setActiveSeconds(found.activeSecondsToday || 0);
           localStorage.setItem('toprank_current_emp_id', found.id);
+          if (!found.isAdmin) {
+            setActiveTab('employee');
+          }
         } else {
           setShowLoginModal(true);
         }
@@ -191,9 +202,19 @@ export default function App() {
 
   // Handle Switch User
   const handleSwitchUser = (emp: Employee) => {
-    setCurrentEmployee(emp);
-    setActiveSeconds(emp.activeSecondsToday || 0);
-    localStorage.setItem('toprank_current_emp_id', emp.id);
+    let target = { ...emp };
+    if (isMasterAdminEmail(target.email)) {
+      target.isAdmin = true;
+      target.adminRole = 'Founder';
+    }
+    setCurrentEmployee(target);
+    setActiveSeconds(target.activeSecondsToday || 0);
+    localStorage.setItem('toprank_current_emp_id', target.id);
+    if (!target.isAdmin) {
+      setActiveTab('employee');
+    } else {
+      setActiveTab('admin');
+    }
   };
 
   // Handle Add Employee
@@ -216,8 +237,19 @@ export default function App() {
 
   // Handle Remove Employee
   const handleRemoveEmployee = async (id: string) => {
-    setEmployees(employees.filter(e => e.id !== id));
-    try { await deleteEmployee(id); } catch (e) {}
+    const targetEmp = employees.find((e) => e.id === id);
+    setEmployees((prev) =>
+      prev.filter(
+        (e) =>
+          e.id !== id &&
+          (targetEmp ? e.email.toLowerCase() !== targetEmp.email.toLowerCase() : true)
+      )
+    );
+    try {
+      await deleteEmployee(id, targetEmp?.email);
+    } catch (e) {
+      console.error('Error in handleRemoveEmployee:', e);
+    }
   };
 
   // Handle Punch Toggle
