@@ -48,7 +48,17 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [resetSuccessMsg, setResetSuccessMsg] = useState<string>('');
 
+  // View Document Modal state
+  const [viewDocModal, setViewDocModal] = useState<{
+    docTitle: string;
+    docNumber: string;
+    docPhotoUrl?: string;
+    employeeName: string;
+  } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const aadhaarFileInputRef = useRef<HTMLInputElement>(null);
+  const panFileInputRef = useRef<HTMLInputElement>(null);
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$';
@@ -66,7 +76,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
     department: 'Development',
     phone: '',
     aadhaarNumber: '',
+    aadhaarPhotoUrl: '',
     panNumber: '',
+    panPhotoUrl: '',
     password: generateRandomPassword(),
     isAdmin: false,
     adminRole: 'Co-Founder',
@@ -89,6 +101,36 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
     }
   };
 
+  const handleAadhaarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Aadhaar photo size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewEmployee((prev) => ({ ...prev, aadhaarPhotoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePanFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("PAN photo size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewEmployee((prev) => ({ ...prev, panPhotoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = () => {
     if (!newEmployee.name || !newEmployee.email || !newEmployee.role) {
       alert("Please fill in required fields: Name, Email, and Role.");
@@ -105,7 +147,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       department: newEmployee.department || 'Development',
       phone: newEmployee.phone || '',
       aadhaarNumber: newEmployee.aadhaarNumber || '',
+      aadhaarPhotoUrl: newEmployee.aadhaarPhotoUrl || '',
       panNumber: (newEmployee.panNumber || '').toUpperCase(),
+      panPhotoUrl: newEmployee.panPhotoUrl || '',
       password: assignedPassword,
       avatar: newEmployee.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250',
       status: 'offline',
@@ -136,7 +180,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
       department: 'Development',
       phone: '',
       aadhaarNumber: '',
+      aadhaarPhotoUrl: '',
       panNumber: '',
+      panPhotoUrl: '',
       password: generateRandomPassword(),
       isAdmin: false,
       adminRole: 'Co-Founder',
@@ -320,36 +366,120 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
               />
             </div>
 
-            {/* Aadhaar Card Number */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 flex items-center justify-between">
-                <span>Aadhaar Card Number</span>
+            {/* Aadhaar Card Number & Photo Upload */}
+            <div className="space-y-2 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <label className="block text-xs font-bold text-slate-700 uppercase flex items-center justify-between">
+                <span>Aadhaar Card Details</span>
                 <span className="text-[10px] text-emerald-600 font-semibold">12 Digits</span>
               </label>
               <input
                 type="text"
                 value={newEmployee.aadhaarNumber}
                 onChange={(e) => setNewEmployee({ ...newEmployee, aadhaarNumber: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 font-mono tracking-wider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-300 font-mono tracking-wider rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                 placeholder="7829-4019-1102"
                 maxLength={14}
               />
+              
+              <div>
+                <input
+                  type="file"
+                  ref={aadhaarFileInputRef}
+                  accept="image/*"
+                  onChange={handleAadhaarFileChange}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => aadhaarFileInputRef.current?.click()}
+                    className="flex-1 bg-white border border-slate-300 hover:border-emerald-500 text-slate-700 hover:text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <Upload size={13} />
+                    <span>{newEmployee.aadhaarPhotoUrl ? 'Change Aadhaar Photo' : 'Upload Aadhaar Photo'}</span>
+                  </button>
+                  {newEmployee.aadhaarPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setNewEmployee({ ...newEmployee, aadhaarPhotoUrl: '' })}
+                      className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50"
+                      title="Remove Aadhaar photo"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                {newEmployee.aadhaarPhotoUrl && (
+                  <div className="mt-2 flex items-center gap-2 bg-white p-1.5 rounded-lg border border-emerald-200">
+                    <img
+                      src={newEmployee.aadhaarPhotoUrl}
+                      alt="Aadhaar Card Preview"
+                      className="w-12 h-12 object-cover rounded border border-slate-200"
+                    />
+                    <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle size={12} /> Aadhaar Photo Attached
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* PAN Card Number */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1 flex items-center justify-between">
-                <span>PAN Card Number</span>
+            {/* PAN Card Number & Photo Upload */}
+            <div className="space-y-2 bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+              <label className="block text-xs font-bold text-slate-700 uppercase flex items-center justify-between">
+                <span>PAN Card Details</span>
                 <span className="text-[10px] text-emerald-600 font-semibold">10 Chars</span>
               </label>
               <input
                 type="text"
                 value={newEmployee.panNumber}
                 onChange={(e) => setNewEmployee({ ...newEmployee, panNumber: e.target.value.toUpperCase() })}
-                className="w-full bg-slate-50 border border-slate-200 font-mono tracking-wider uppercase rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-slate-300 font-mono tracking-wider uppercase rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                 placeholder="ABCDE1234F"
                 maxLength={10}
               />
+
+              <div>
+                <input
+                  type="file"
+                  ref={panFileInputRef}
+                  accept="image/*"
+                  onChange={handlePanFileChange}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => panFileInputRef.current?.click()}
+                    className="flex-1 bg-white border border-slate-300 hover:border-blue-500 text-slate-700 hover:text-blue-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <Upload size={13} />
+                    <span>{newEmployee.panPhotoUrl ? 'Change PAN Photo' : 'Upload PAN Photo'}</span>
+                  </button>
+                  {newEmployee.panPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setNewEmployee({ ...newEmployee, panPhotoUrl: '' })}
+                      className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50"
+                      title="Remove PAN photo"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                {newEmployee.panPhotoUrl && (
+                  <div className="mt-2 flex items-center gap-2 bg-white p-1.5 rounded-lg border border-blue-200">
+                    <img
+                      src={newEmployee.panPhotoUrl}
+                      alt="PAN Card Preview"
+                      className="w-12 h-12 object-cover rounded border border-slate-200"
+                    />
+                    <span className="text-[11px] text-blue-700 font-semibold flex items-center gap-1">
+                      <CheckCircle size={12} /> PAN Photo Attached
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Portal Password */}
@@ -525,8 +655,8 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                   </td>
 
                   <td className="px-4 py-3.5 align-middle">
-                    <div className="space-y-1 text-xs">
-                      <div className="flex items-center gap-2">
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-slate-400 w-16 shrink-0">AADHAAR:</span>
                         {emp.aadhaarNumber ? (
                           <span className="font-mono text-slate-700 font-semibold bg-emerald-50 text-emerald-800 px-1.5 py-0.5 rounded text-[11px] border border-emerald-200">
@@ -544,9 +674,26 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                             {showAadhaar[emp.id] ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         )}
+                        {emp.aadhaarPhotoUrl && (
+                          <button
+                            onClick={() =>
+                              setViewDocModal({
+                                docTitle: 'Aadhaar Card Photo',
+                                docNumber: emp.aadhaarNumber || 'Attached',
+                                docPhotoUrl: emp.aadhaarPhotoUrl,
+                                employeeName: emp.name,
+                              })
+                            }
+                            className="text-emerald-700 hover:text-emerald-900 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-emerald-300 shadow-xs"
+                            title="View Aadhaar Card Photo"
+                          >
+                            <FileText size={11} />
+                            <span>Aadhaar Photo</span>
+                          </button>
+                        )}
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-slate-400 w-16 shrink-0">PAN CARD:</span>
                         {emp.panNumber ? (
                           <span className="font-mono text-slate-700 font-semibold bg-blue-50 text-blue-800 px-1.5 py-0.5 rounded text-[11px] border border-blue-200">
@@ -554,6 +701,23 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                           </span>
                         ) : (
                           <span className="text-slate-400 text-[11px] italic">Not provided</span>
+                        )}
+                        {emp.panPhotoUrl && (
+                          <button
+                            onClick={() =>
+                              setViewDocModal({
+                                docTitle: 'PAN Card Photo',
+                                docNumber: emp.panNumber || 'Attached',
+                                docPhotoUrl: emp.panPhotoUrl,
+                                employeeName: emp.name,
+                              })
+                            }
+                            className="text-blue-700 hover:text-blue-900 bg-blue-100 hover:bg-blue-200 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border border-blue-300 shadow-xs"
+                            title="View PAN Card Photo"
+                          >
+                            <FileText size={11} />
+                            <span>PAN Photo</span>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -765,6 +929,63 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
                 {isResetting ? 'Updating...' : 'Update Password'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Document Photo Modal */}
+      {viewDocModal && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <CreditCard size={18} className="text-blue-600" />
+                  {viewDocModal.docTitle}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {viewDocModal.employeeName} • Number: <span className="font-mono font-bold text-slate-800">{viewDocModal.docNumber}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setViewDocModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {viewDocModal.docPhotoUrl ? (
+              <div className="space-y-4">
+                <div className="bg-slate-900/5 p-2 rounded-xl border border-slate-200 flex items-center justify-center max-h-[400px] overflow-hidden">
+                  <img
+                    src={viewDocModal.docPhotoUrl}
+                    alt={viewDocModal.docTitle}
+                    className="max-h-[380px] w-auto object-contain rounded-lg shadow-md"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <a
+                    href={viewDocModal.docPhotoUrl}
+                    download={`${viewDocModal.employeeName.replace(/\s+/g, '_')}_${viewDocModal.docTitle.replace(/\s+/g, '_')}.png`}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-2 transition-all shadow-md"
+                  >
+                    <Upload size={14} className="rotate-180" />
+                    Download Document Photo
+                  </a>
+                  <button
+                    onClick={() => setViewDocModal(null)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-slate-500 text-xs font-semibold">
+                No document image attached.
+              </div>
+            )}
           </div>
         </div>
       )}

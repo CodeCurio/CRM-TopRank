@@ -36,7 +36,9 @@ export interface Employee {
   isAdmin?: boolean;
   adminRole?: AdminRole;
   aadhaarNumber?: string;
+  aadhaarPhotoUrl?: string;
   panNumber?: string;
+  panPhotoUrl?: string;
   password?: string;
   employeeCode?: string;
 }

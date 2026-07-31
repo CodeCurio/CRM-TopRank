@@ -105,7 +105,9 @@ export const saveEmployee = async (employee: Employee): Promise<Employee> => {
   delete employeePayload.password;
   delete employeePayload.adminRole;
   delete employeePayload.aadhaarNumber;
+  delete employeePayload.aadhaarPhotoUrl;
   delete employeePayload.panNumber;
+  delete employeePayload.panPhotoUrl;
   delete employeePayload.employeeCode;
 
   const { error } = await supabase.from('employees').upsert(employeePayload);
