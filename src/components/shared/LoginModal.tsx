@@ -135,6 +135,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           if (isMasterAdminEmail(cleanEmail)) {
             empData.isAdmin = true;
             empData.adminRole = 'Founder';
+          } else {
+            empData.isAdmin = Boolean(empData.isAdmin);
+            if (!empData.isAdmin) {
+              empData.adminRole = undefined;
+            }
           }
         }
 

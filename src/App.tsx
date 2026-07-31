@@ -94,6 +94,11 @@ export default function App() {
             if (isMasterAdminEmail(found.email)) {
               found.isAdmin = true;
               found.adminRole = 'Founder';
+            } else {
+              found.isAdmin = Boolean(found.isAdmin);
+              if (!found.isAdmin) {
+                found.adminRole = undefined;
+              }
             }
           }
 
@@ -147,12 +152,19 @@ export default function App() {
           if (isMasterAdminEmail(found.email)) {
             found.isAdmin = true;
             found.adminRole = 'Founder';
+          } else {
+            found.isAdmin = Boolean(found.isAdmin);
+            if (!found.isAdmin) {
+              found.adminRole = undefined;
+            }
           }
           setCurrentEmployee(found);
           setActiveSeconds(found.activeSecondsToday || 0);
           localStorage.setItem('toprank_current_emp_id', found.id);
           if (!found.isAdmin) {
             setActiveTab('employee');
+          } else {
+            setActiveTab('admin');
           }
         } else {
           setShowLoginModal(true);
