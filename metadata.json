@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix TopRank CRM",
+  "description": "Enterprise CRM \u0026 Workforce Management System for TopRank India featuring employee tracking, client ledger, invoices, meetings, and project progress monitoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

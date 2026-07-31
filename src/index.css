@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-blue-500: #2970E1;
+  --color-blue-600: #215DBC;
+  --color-blue-700: #19468E;
+  
+  --color-amber-500: #C68F51;
+  --color-amber-400: #D6A872;
+  
+  --color-rose-500: #C85955;
+  --color-rose-600: #A84946;
+}
+
+@layer utilities {
+  @keyframes blink-glow {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 0 12px rgba(220, 38, 38, 0.8);
+    }
+    50% {
+      opacity: 0.3;
+      transform: scale(0.96);
+      box-shadow: 0 0 2px rgba(220, 38, 38, 0.2);
+    }
+  }
+
+  @keyframes pulse-amber {
+    0%, 100% {
+      opacity: 1;
+      box-shadow: 0 0 10px rgba(217, 119, 6, 0.7);
+    }
+    50% {
+      opacity: 0.4;
+      box-shadow: 0 0 3px rgba(217, 119, 6, 0.2);
+    }
+  }
+
+  .animate-blink-due {
+    animation: blink-glow 1.2s infinite ease-in-out;
+  }
+
+  .animate-pulse-amber {
+    animation: pulse-amber 1.5s infinite ease-in-out;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-invoice, #printable-invoice * {
+    visibility: visible;
+  }
+  #printable-invoice {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
