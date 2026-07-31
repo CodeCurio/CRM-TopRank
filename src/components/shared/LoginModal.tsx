@@ -108,7 +108,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             empData = byEmail as Employee;
             if (empData.id !== authUser.id) {
               empData.id = authUser.id;
-              await supabase.from('employees').upsert(empData);
+              const cleanPayload = {
+                id: authUser.id,
+                name: empData.name,
+                email: cleanEmail,
+                role: empData.role,
+                department: empData.department,
+                avatar: empData.avatar,
+                phone: empData.phone || '',
+                status: empData.status || 'offline',
+                activeSecondsToday: empData.activeSecondsToday || 0,
+                lastPunchIn: empData.lastPunchIn || '09:00 AM',
+                hourlyRate: empData.hourlyRate || 0,
+                completedTasksCount: empData.completedTasksCount || 0,
+                pendingTasksCount: empData.pendingTasksCount || 0,
+                productivityScore: empData.productivityScore || 100,
+                isAdmin: Boolean(empData.isAdmin),
+              };
+              await supabase.from('employees').upsert(cleanPayload);
             }
           }
         }
@@ -122,9 +139,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             .join(' ');
 
           const isTopRankAdmin =
-            cleanEmail.includes('toprank') ||
-            cleanEmail.includes('admin') ||
-            cleanEmail.includes('gmail');
+            cleanEmail === 'toprankdigitalservice@gmail.com' ||
+            cleanEmail === 'arnav@toprankindia.com' ||
+            cleanEmail.endsWith('@toprankindia.com') ||
+            cleanEmail.startsWith('admin@');
 
           empData = {
             id: authUser.id,
@@ -145,7 +163,25 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             adminRole: isTopRankAdmin ? 'Founder' : undefined,
           };
 
-          const { error: insertError } = await supabase.from('employees').upsert(empData);
+          const cleanPayload = {
+            id: empData.id,
+            name: empData.name,
+            email: cleanEmail,
+            role: empData.role,
+            department: empData.department,
+            avatar: empData.avatar,
+            phone: '',
+            status: 'active',
+            activeSecondsToday: 0,
+            lastPunchIn: '09:00 AM',
+            hourlyRate: 1000,
+            completedTasksCount: 0,
+            pendingTasksCount: 0,
+            productivityScore: 100,
+            isAdmin: isTopRankAdmin,
+          };
+
+          const { error: insertError } = await supabase.from('employees').upsert(cleanPayload);
           if (insertError) {
             console.error('Error auto-creating employee profile:', insertError);
           }

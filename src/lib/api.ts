@@ -101,16 +101,25 @@ export const saveEmployee = async (employee: Employee): Promise<Employee> => {
     }
   }
 
-  const employeePayload = { ...employee, email: cleanEmail };
-  delete employeePayload.password;
-  delete employeePayload.adminRole;
-  delete employeePayload.aadhaarNumber;
-  delete employeePayload.aadhaarPhotoUrl;
-  delete employeePayload.panNumber;
-  delete employeePayload.panPhotoUrl;
-  delete employeePayload.employeeCode;
+  const cleanPayload = {
+    id: employee.id,
+    name: employee.name,
+    email: cleanEmail,
+    role: employee.role,
+    department: employee.department,
+    avatar: employee.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(employee.name)}&background=0D8ABC&color=fff`,
+    phone: employee.phone || '',
+    status: employee.status || 'offline',
+    activeSecondsToday: employee.activeSecondsToday || 0,
+    lastPunchIn: employee.lastPunchIn || '09:00 AM',
+    hourlyRate: employee.hourlyRate || 0,
+    completedTasksCount: employee.completedTasksCount || 0,
+    pendingTasksCount: employee.pendingTasksCount || 0,
+    productivityScore: employee.productivityScore || 100,
+    isAdmin: Boolean(employee.isAdmin),
+  };
 
-  const { error } = await supabase.from('employees').upsert(employeePayload);
+  const { error } = await supabase.from('employees').upsert(cleanPayload);
   if (error) {
     console.error('Error saving employee to database:', error);
     throw error;

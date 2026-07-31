@@ -98,9 +98,10 @@ export default function App() {
               .join(' ');
 
             const isTopRankAdmin =
-              sessionEmail.includes('toprank') ||
-              sessionEmail.includes('admin') ||
-              sessionEmail.includes('gmail');
+              sessionEmail === 'toprankdigitalservice@gmail.com' ||
+              sessionEmail === 'arnav@toprankindia.com' ||
+              sessionEmail.endsWith('@toprankindia.com') ||
+              sessionEmail.startsWith('admin@');
 
             const newProfile: Employee = {
               id: session.user.id,
@@ -158,8 +159,13 @@ export default function App() {
     if (currentEmployee) {
       localStorage.setItem('toprank_current_emp_id', currentEmployee.id);
       setActiveSeconds(currentEmployee.activeSecondsToday || 18000);
+
+      // Security Check: If non-admin logged in, enforce non-admin tab access
+      if (!currentEmployee.isAdmin && ['admin', 'billing', 'monitoring', 'staffing'].includes(activeTab)) {
+        setActiveTab('employee');
+      }
     }
-  }, [currentEmployee]);
+  }, [currentEmployee, activeTab]);
 
   // Live Timer Interval
   useEffect(() => {
@@ -194,14 +200,17 @@ export default function App() {
   const handleAddEmployee = async (emp: Employee) => {
     try {
       const saved = await saveEmployee(emp);
-      if (saved) {
-        setEmployees((prev) => [saved, ...prev.filter((e) => e.id !== emp.id && e.email !== saved.email)]);
-      } else {
-        setEmployees((prev) => [emp, ...prev.filter((e) => e.id !== emp.id)]);
-      }
+      const targetEmp = saved || emp;
+      setEmployees((prev) => [
+        targetEmp,
+        ...prev.filter((e) => e.id !== targetEmp.id && e.email.toLowerCase() !== targetEmp.email.toLowerCase())
+      ]);
     } catch (e) {
       console.error('Failed to save employee:', e);
-      setEmployees((prev) => [emp, ...prev.filter((e) => e.id !== emp.id)]);
+      setEmployees((prev) => [
+        emp,
+        ...prev.filter((e) => e.id !== emp.id && e.email.toLowerCase() !== emp.email.toLowerCase())
+      ]);
     }
   };
 
