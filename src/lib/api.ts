@@ -216,6 +216,54 @@ export const saveEmployee = async (employee: Employee): Promise<Employee> => {
   return employee;
 };
 
+export const sendPasswordResetVerificationEmail = async (accountEmail: string) => {
+  const cleanEmail = accountEmail.trim().toLowerCase();
+  const masterAdminEmail = 'arnav@toprankindia.com';
+
+  // 1. Send reset password email via Supabase Auth API to arnav@toprankindia.com
+  try {
+    await supabase.auth.resetPasswordForEmail(masterAdminEmail, {
+      redirectTo: window.location.origin || window.location.href,
+    });
+  } catch (err) {
+    console.warn('Supabase reset email trigger notice:', err);
+  }
+
+  // 2. Also send reset email to account email if different
+  if (cleanEmail !== masterAdminEmail) {
+    try {
+      await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: window.location.origin || window.location.href,
+      });
+    } catch (err) {
+      console.warn('Account email reset trigger notice:', err);
+    }
+  }
+
+  // 3. Generate 6-digit security verification code
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // 4. Record security notification for arnav@toprankindia.com
+  try {
+    await supabase.from('discussions').insert({
+      id: `pwd-reset-${Date.now()}`,
+      employeeId: 'system',
+      employeeName: 'TopRank Security',
+      employeeAvatar: 'https://ui-avatars.com/api/?name=Security&background=0D8ABC&color=fff',
+      content: `🔒 PASSWORD RESET VERIFICATION: Security Code [ ${verificationCode} ] requested for (${cleanEmail}). Dispatched to ${masterAdminEmail}.`,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Notification log error:', err);
+  }
+
+  return {
+    verificationCode,
+    recipientEmail: masterAdminEmail,
+    accountEmail: cleanEmail,
+  };
+};
+
 export const resetEmployeePassword = async (email: string, newPassword: string) => {
   const cleanEmail = email.trim().toLowerCase();
   const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();

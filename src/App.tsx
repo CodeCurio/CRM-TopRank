@@ -26,6 +26,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { ClientFinancialsLedger } from './components/admin/ClientFinancialsLedger';
 import { EmployeeMonitoring } from './components/admin/EmployeeMonitoring';
 import { EmployeeManagement } from './components/admin/EmployeeManagement';
+import { BusinessAnalytics } from './components/admin/BusinessAnalytics';
 import { EmployeeDashboard } from './components/employee/EmployeeDashboard';
 import { ProjectManager } from './components/shared/ProjectManager';
 import { MeetingsAndAttendance } from './components/shared/MeetingsAndAttendance';
@@ -184,7 +185,7 @@ export default function App() {
       setActiveSeconds(currentEmployee.activeSecondsToday || 18000);
 
       // Security Check: If non-admin logged in, enforce non-admin tab access
-      if (!currentEmployee.isAdmin && ['admin', 'billing', 'monitoring', 'staffing'].includes(activeTab)) {
+      if (!currentEmployee.isAdmin && ['admin', 'billing', 'monitoring', 'staffing', 'analytics'].includes(activeTab)) {
         setActiveTab('employee');
       }
     }
@@ -602,6 +603,15 @@ export default function App() {
             employees={employees}
             onAddEmployee={handleAddEmployee}
             onRemoveEmployee={handleRemoveEmployee}
+          />
+        )}
+
+        {activeTab === 'analytics' && (
+          <BusinessAnalytics
+            employees={employees}
+            invoices={invoices}
+            ledger={ledger}
+            projects={projects}
           />
         )}
 

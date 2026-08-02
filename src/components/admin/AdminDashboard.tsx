@@ -11,6 +11,7 @@ import {
   Plus,
   ArrowRight,
   Zap,
+  BarChart3,
 } from 'lucide-react';
 import {
   BarChart,
@@ -118,6 +119,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Plus size={16} />
             Assign Work To Employee
+          </button>
+          <button
+            onClick={() => onNavigateTab('analytics')}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-2"
+          >
+            <BarChart3 size={15} />
+            Sales & Business Tracking
           </button>
           <button
             onClick={() => onNavigateTab('billing')}

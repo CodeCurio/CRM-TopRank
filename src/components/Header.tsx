@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Sparkles,
   UserPlus,
+  BarChart3,
 } from 'lucide-react';
 import { Employee } from '../types';
 import { formatSecondsDigital } from '../utils/formatters';
@@ -291,6 +292,21 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <UserPlus size={15} />
               Manage Staff
+            </button>
+          )}
+
+          {/* Sales, Expansion & Revenue Analytics */}
+          {currentEmployee.isAdmin && (
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              <BarChart3 size={15} className="text-emerald-400" />
+              Sales & Business Tracking
             </button>
           )}
 
