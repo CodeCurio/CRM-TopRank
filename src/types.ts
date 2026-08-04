@@ -51,6 +51,7 @@ export interface Task {
   assignedEmployeeId: string;
   assignedEmployeeName: string;
   assignedEmployeeAvatar?: string;
+  assignedEmployeeEmail?: string;
   priority: TaskPriority;
   status: WorkStatus;
   dueDate: string;

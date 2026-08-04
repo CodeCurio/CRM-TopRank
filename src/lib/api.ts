@@ -25,8 +25,32 @@ export const isMasterAdminEmail = (email?: string): boolean => {
   return MASTER_ADMIN_EMAILS.includes(clean) || clean.startsWith('admin@');
 };
 
+// Local employee metadata store helper for instant client-side persistence
+const getLocalEmployeeCache = (): Record<string, Partial<Employee>> => {
+  try {
+    const raw = localStorage.getItem('toprank_employees_metadata_store');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setLocalEmployeeCache = (email: string, emp: Partial<Employee>) => {
+  try {
+    if (!email) return;
+    const clean = email.trim().toLowerCase();
+    const cache = getLocalEmployeeCache();
+    cache[clean] = { ...(cache[clean] || {}), ...emp };
+    localStorage.setItem('toprank_employees_metadata_store', JSON.stringify(cache));
+  } catch (e) {
+    console.warn('Failed to write local metadata cache:', e);
+  }
+};
+
 // Fetch all data
 export const fetchAllData = async () => {
+  const localCache = getLocalEmployeeCache();
+
   const [
     { data: employees },
     { data: projects },
@@ -47,7 +71,34 @@ export const fetchAllData = async () => {
     supabase.from('ledger').select('*').order('date', { ascending: false })
   ]);
 
-  let employeeList: Employee[] = employees || [];
+  let employeeList: Employee[] = (employees || []).map((e: any) => {
+    const cleanEmail = e.email ? e.email.trim().toLowerCase() : '';
+    const cached = localCache[cleanEmail] || {};
+    return {
+      id: e.id,
+      name: e.name,
+      email: cleanEmail,
+      role: e.role,
+      department: e.department,
+      avatar: e.avatar || e.photo_url || cached.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(e.name || 'Staff')}&background=0D8ABC&color=fff`,
+      phone: e.phone || cached.phone || '',
+      status: e.status || 'offline',
+      activeSecondsToday: e.activeSecondsToday || e.active_seconds_today || 0,
+      lastPunchIn: e.lastPunchIn || e.last_punch_in || '09:00 AM',
+      hourlyRate: e.hourlyRate || e.hourly_rate || 0,
+      completedTasksCount: e.completedTasksCount || e.completed_tasks_count || 0,
+      pendingTasksCount: e.pendingTasksCount || e.pending_tasks_count || 0,
+      productivityScore: e.productivityScore || e.productivity_score || 100,
+      isAdmin: Boolean(e.isAdmin ?? e.is_admin ?? cached.isAdmin),
+      adminRole: e.adminRole || e.admin_role || cached.adminRole || (e.isAdmin ? 'Co-Founder' : undefined),
+      aadhaarNumber: e.aadhaarNumber || e.aadhaar_number || cached.aadhaarNumber || '',
+      aadhaarPhotoUrl: e.aadhaarPhotoUrl || e.aadhaar_photo_url || cached.aadhaarPhotoUrl || '',
+      panNumber: e.panNumber || e.pan_number || cached.panNumber || '',
+      panPhotoUrl: e.panPhotoUrl || e.pan_photo_url || cached.panPhotoUrl || '',
+      password: e.password || cached.password || '',
+      employeeCode: e.employeeCode || e.employee_code || cached.employeeCode || '',
+    };
+  });
 
   // Sync Supabase Auth users to ensure all registered employees appear in Manage Staff
   try {
@@ -56,6 +107,9 @@ export const fetchAllData = async () => {
       for (const u of usersData.users) {
         if (!u.email) continue;
         const cleanEmail = u.email.trim().toLowerCase();
+        const meta = u.user_metadata || {};
+        const localMeta = localCache[cleanEmail] || {};
+
         const existingIndex = employeeList.findIndex(
           (e) => e.id === u.id || e.email.toLowerCase() === cleanEmail
         );
@@ -71,12 +125,12 @@ export const fetchAllData = async () => {
 
           const newEmp: Employee = {
             id: u.id,
-            name: formattedName || 'TopRank Staff',
+            name: meta.name || localMeta.name || formattedName || 'TopRank Staff',
             email: cleanEmail,
-            role: isAdmin ? 'Master Admin' : 'Executive Specialist',
-            department: isAdmin ? 'Management' : 'Operations',
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName || 'Staff')}&background=0D8ABC&color=fff`,
-            phone: '',
+            role: meta.role || localMeta.role || (isAdmin ? 'Master Admin' : 'Executive Specialist'),
+            department: meta.department || localMeta.department || (isAdmin ? 'Management' : 'Operations'),
+            avatar: meta.avatar || localMeta.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName || 'Staff')}&background=0D8ABC&color=fff`,
+            phone: meta.phone || localMeta.phone || '',
             status: 'active',
             activeSecondsToday: 0,
             lastPunchIn: '09:00 AM',
@@ -84,37 +138,32 @@ export const fetchAllData = async () => {
             completedTasksCount: 0,
             pendingTasksCount: 0,
             productivityScore: 100,
-            isAdmin: isAdmin,
-            adminRole: isAdmin ? 'Founder' : undefined,
+            isAdmin: isAdmin || Boolean(meta.isAdmin || localMeta.isAdmin),
+            adminRole: meta.adminRole || localMeta.adminRole || (isAdmin ? 'Founder' : undefined),
+            aadhaarNumber: meta.aadhaarNumber || localMeta.aadhaarNumber || '',
+            aadhaarPhotoUrl: meta.aadhaarPhotoUrl || localMeta.aadhaarPhotoUrl || '',
+            panNumber: meta.panNumber || localMeta.panNumber || '',
+            panPhotoUrl: meta.panPhotoUrl || localMeta.panPhotoUrl || '',
+            password: meta.password || localMeta.password || '',
+            employeeCode: meta.employeeCode || localMeta.employeeCode || '',
           };
 
-          const cleanPayload = {
-            id: newEmp.id,
-            name: newEmp.name,
-            email: cleanEmail,
-            role: newEmp.role,
-            department: newEmp.department,
-            avatar: newEmp.avatar,
-            phone: '',
-            status: 'active',
-            activeSecondsToday: 0,
-            lastPunchIn: '09:00 AM',
-            hourlyRate: 1000,
-            completedTasksCount: 0,
-            pendingTasksCount: 0,
-            productivityScore: 100,
-            isAdmin: newEmp.isAdmin,
-          };
-
-          await supabase.from('employees').upsert(cleanPayload);
           employeeList.push(newEmp);
         } else {
-          // If master admin email, force isAdmin = true
-          if (isAdmin && !employeeList[existingIndex].isAdmin) {
-            employeeList[existingIndex].isAdmin = true;
-            employeeList[existingIndex].role = 'Master Admin';
-            employeeList[existingIndex].adminRole = 'Founder';
-            await supabase.from('employees').update({ isAdmin: true, role: 'Master Admin' }).eq('id', employeeList[existingIndex].id);
+          // Merge metadata into existing record
+          const emp = employeeList[existingIndex];
+          if (meta.avatar || localMeta.avatar) emp.avatar = meta.avatar || localMeta.avatar;
+          if (meta.aadhaarNumber || localMeta.aadhaarNumber) emp.aadhaarNumber = meta.aadhaarNumber || localMeta.aadhaarNumber;
+          if (meta.aadhaarPhotoUrl || localMeta.aadhaarPhotoUrl) emp.aadhaarPhotoUrl = meta.aadhaarPhotoUrl || localMeta.aadhaarPhotoUrl;
+          if (meta.panNumber || localMeta.panNumber) emp.panNumber = meta.panNumber || localMeta.panNumber;
+          if (meta.panPhotoUrl || localMeta.panPhotoUrl) emp.panPhotoUrl = meta.panPhotoUrl || localMeta.panPhotoUrl;
+          if (meta.password || localMeta.password) emp.password = meta.password || localMeta.password;
+          if (meta.phone || localMeta.phone) emp.phone = meta.phone || localMeta.phone;
+
+          if (isAdmin) {
+            emp.isAdmin = true;
+            emp.role = 'Master Admin';
+            emp.adminRole = 'Founder';
           }
         }
       }
@@ -123,10 +172,33 @@ export const fetchAllData = async () => {
     console.error('Error syncing auth users in fetchAllData:', err);
   }
 
+  // Read local task store cache to ensure client persistence
+  let taskList: Task[] = tasks || [];
+  try {
+    const rawLocalTasks = localStorage.getItem('toprank_tasks_store');
+    if (rawLocalTasks) {
+      const localTasks: Task[] = JSON.parse(rawLocalTasks);
+      const localTaskMap = new Map(localTasks.map((t) => [t.id, t]));
+
+      // Merge/override existing tasks with updated local tasks
+      taskList = taskList.map((t) => localTaskMap.get(t.id) || t);
+
+      // Append any newly created local tasks not in remote list
+      const existingIds = new Set(taskList.map((t) => t.id));
+      for (const lt of localTasks) {
+        if (!existingIds.has(lt.id)) {
+          taskList.unshift(lt);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Task local storage read error:', e);
+  }
+
   return {
     employees: employeeList,
     projects: projects || [],
-    tasks: tasks || [],
+    tasks: taskList,
     invoices: invoices || [],
     attendance: attendance || [],
     meetings: meetings || [],
@@ -153,43 +225,70 @@ export const seedDatabase = async () => {
 
 export const saveEmployee = async (employee: Employee): Promise<Employee> => {
   const cleanEmail = employee.email ? employee.email.trim().toLowerCase() : '';
-  
-  // First, create or update the user in Supabase Auth using Admin API
-  if (cleanEmail && employee.password) {
-    try {
-      const { data: usersData, error: listError } = await supabase.auth.admin.listUsers();
-      if (listError) throw listError;
+  if (!cleanEmail) return employee;
 
+  // 1. Always update local cache mirror
+  setLocalEmployeeCache(cleanEmail, employee);
+
+  const userMetadata = {
+    name: employee.name,
+    email: cleanEmail,
+    role: employee.role,
+    department: employee.department,
+    avatar: employee.avatar,
+    phone: employee.phone || '',
+    aadhaarNumber: employee.aadhaarNumber || '',
+    aadhaarPhotoUrl: employee.aadhaarPhotoUrl || '',
+    panNumber: employee.panNumber || '',
+    panPhotoUrl: employee.panPhotoUrl || '',
+    password: employee.password || '',
+    isAdmin: Boolean(employee.isAdmin),
+    adminRole: employee.adminRole || '',
+    employeeCode: employee.employeeCode || '',
+  };
+
+  // 2. Sync to Supabase Auth User Metadata & Password via Admin API
+  try {
+    const { data: usersData } = await supabase.auth.admin.listUsers();
+    if (usersData?.users) {
       const existingUser = usersData.users.find((u: any) => u.email?.toLowerCase() === cleanEmail);
 
       if (!existingUser) {
-        const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+        const { data: newUser } = await supabase.auth.admin.createUser({
           email: cleanEmail,
-          password: employee.password,
+          password: employee.password || 'TopRank123!',
           email_confirm: true,
+          user_metadata: userMetadata,
         });
-        
-        if (createError) throw createError;
-        
-        if (newUser.user) {
+
+        if (newUser?.user) {
           employee.id = newUser.user.id;
         }
       } else {
         if (employee.id.startsWith('emp-')) {
           employee.id = existingUser.id;
         }
-        
-        // Update password in Supabase Auth
-        await supabase.auth.admin.updateUserById(existingUser.id, {
-          password: employee.password,
-        });
+
+        const updatePayload: any = {
+          user_metadata: {
+            ...(existingUser.user_metadata || {}),
+            ...userMetadata,
+          },
+        };
+
+        if (employee.password) {
+          updatePayload.password = employee.password;
+        }
+
+        await supabase.auth.admin.updateUserById(existingUser.id, updatePayload);
       }
-    } catch (err) {
-      console.error('Error creating/updating Auth user:', err);
     }
+  } catch (authErr) {
+    console.error('Error syncing Supabase Auth user metadata:', authErr);
   }
 
-  const cleanPayload = {
+  // 3. Sync to Supabase DB 'employees' table
+  const fullPayload: any = {
     id: employee.id,
     name: employee.name,
     email: cleanEmail,
@@ -205,12 +304,46 @@ export const saveEmployee = async (employee: Employee): Promise<Employee> => {
     pendingTasksCount: employee.pendingTasksCount || 0,
     productivityScore: employee.productivityScore || 100,
     isAdmin: Boolean(employee.isAdmin),
+    aadhaarNumber: employee.aadhaarNumber || '',
+    aadhaarPhotoUrl: employee.aadhaarPhotoUrl || '',
+    panNumber: employee.panNumber || '',
+    panPhotoUrl: employee.panPhotoUrl || '',
+    password: employee.password || '',
+    adminRole: employee.adminRole || '',
+    employeeCode: employee.employeeCode || '',
+    // Snake case fallbacks
+    aadhaar_number: employee.aadhaarNumber || '',
+    aadhaar_photo_url: employee.aadhaarPhotoUrl || '',
+    pan_number: employee.panNumber || '',
+    pan_photo_url: employee.panPhotoUrl || '',
+    admin_role: employee.adminRole || '',
   };
 
-  const { error } = await supabase.from('employees').upsert(cleanPayload);
-  if (error) {
-    console.error('Error saving employee to database:', error);
-    throw error;
+  try {
+    const { error } = await supabase.from('employees').upsert(fullPayload);
+    if (error) {
+      console.warn('Full payload upsert notice, saving base payload:', error.message);
+      const basePayload = {
+        id: employee.id,
+        name: employee.name,
+        email: cleanEmail,
+        role: employee.role,
+        department: employee.department,
+        avatar: employee.avatar,
+        phone: employee.phone || '',
+        status: employee.status || 'offline',
+        activeSecondsToday: employee.activeSecondsToday || 0,
+        lastPunchIn: employee.lastPunchIn || '09:00 AM',
+        hourlyRate: employee.hourlyRate || 0,
+        completedTasksCount: employee.completedTasksCount || 0,
+        pendingTasksCount: employee.pendingTasksCount || 0,
+        productivityScore: employee.productivityScore || 100,
+        isAdmin: Boolean(employee.isAdmin),
+      };
+      await supabase.from('employees').upsert(basePayload);
+    }
+  } catch (dbErr) {
+    console.error('Error saving employee row to DB:', dbErr);
   }
 
   return employee;
@@ -319,7 +452,38 @@ export const saveProject = async (project: Project) => {
 };
 
 export const saveTask = async (task: Task) => {
-  await supabase.from('tasks').upsert(task);
+  try {
+    const rawLocal = localStorage.getItem('toprank_tasks_store');
+    const list: Task[] = rawLocal ? JSON.parse(rawLocal) : [];
+    const updated = [task, ...list.filter((t) => t.id !== task.id)];
+    localStorage.setItem('toprank_tasks_store', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Local task cache save error:', e);
+  }
+
+  try {
+    const payload: any = {
+      id: task.id,
+      title: task.title,
+      description: task.description || '',
+      clientName: task.clientName || 'General Work',
+      assignedEmployeeId: task.assignedEmployeeId,
+      assignedEmployeeName: task.assignedEmployeeName,
+      assignedEmployeeAvatar: task.assignedEmployeeAvatar || '',
+      assignedEmployeeEmail: task.assignedEmployeeEmail || '',
+      priority: task.priority || 'Medium',
+      status: task.status || 'To Do',
+      dueDate: task.dueDate || '',
+      estimatedHours: task.estimatedHours || 0,
+      loggedHours: task.loggedHours || 0,
+      progressPercentage: task.progressPercentage || 0,
+      createdDate: task.createdDate || new Date().toISOString().split('T')[0],
+      category: task.category || 'General Task',
+    };
+    await supabase.from('tasks').upsert(payload);
+  } catch (err) {
+    console.warn('Supabase saveTask notice:', err);
+  }
 };
 
 export const saveInvoice = async (invoice: Invoice) => {

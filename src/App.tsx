@@ -61,11 +61,17 @@ export default function App() {
   const [isPunchActive, setIsPunchActive] = useState<boolean>(true);
   const [activeSeconds, setActiveSeconds] = useState<number>(0);
 
-  // Modals state
+  // Modals & Toast state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showTaskModal, setShowTaskModal] = useState<boolean>(false);
   const [taskModalEmpId, setTaskModalEmpId] = useState<string | undefined>(undefined);
   const [printInvoice, setPrintInvoice] = useState<Invoice | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -223,10 +229,33 @@ export default function App() {
     setCurrentEmployee(target);
     setActiveSeconds(target.activeSecondsToday || 0);
     localStorage.setItem('toprank_current_emp_id', target.id);
+    setShowLoginModal(false);
     if (!target.isAdmin) {
       setActiveTab('employee');
     } else {
       setActiveTab('admin');
+    }
+  };
+
+  // Handle Update Profile Picture
+  const handleUpdateAvatar = async (newAvatarUrl: string) => {
+    if (!currentEmployee) return;
+    const updatedEmployee: Employee = {
+      ...currentEmployee,
+      avatar: newAvatarUrl,
+    };
+    setCurrentEmployee(updatedEmployee);
+    setEmployees((prev) =>
+      prev.map((e) =>
+        e.id === updatedEmployee.id || e.email.toLowerCase() === updatedEmployee.email.toLowerCase()
+          ? updatedEmployee
+          : e
+      )
+    );
+    try {
+      await saveEmployee(updatedEmployee);
+    } catch (err) {
+      console.error('Failed to save updated avatar:', err);
     }
   };
 
@@ -245,6 +274,26 @@ export default function App() {
         emp,
         ...prev.filter((e) => e.id !== emp.id && e.email.toLowerCase() !== emp.email.toLowerCase())
       ]);
+    }
+  };
+
+  // Handle Update Employee
+  const handleUpdateEmployee = async (emp: Employee) => {
+    try {
+      const saved = await saveEmployee(emp);
+      const targetEmp = saved || emp;
+      setEmployees((prev) =>
+        prev.map((e) =>
+          e.id === targetEmp.id || e.email.toLowerCase() === targetEmp.email.toLowerCase()
+            ? targetEmp
+            : e
+        )
+      );
+      if (currentEmployee && (currentEmployee.id === targetEmp.id || currentEmployee.email.toLowerCase() === targetEmp.email.toLowerCase())) {
+        setCurrentEmployee(targetEmp);
+      }
+    } catch (e) {
+      console.error('Failed to update employee:', e);
     }
   };
 
@@ -429,7 +478,8 @@ export default function App() {
 
   // Handle Adding New Task
   const handleAddTask = async (newTask: Task) => {
-    setTasks([newTask, ...tasks]);
+    setTasks((prev) => [newTask, ...prev]);
+    triggerToast(`✓ Work assigned to ${newTask.assignedEmployeeName}`);
     try { await saveTask(newTask); } catch (e) {}
   };
 
@@ -527,12 +577,23 @@ export default function App() {
         onSwitchUser={handleSwitchUser}
         onOpenLoginModal={() => setShowLoginModal(true)}
         onLogout={handleLogout}
+        onUpdateAvatar={handleUpdateAvatar}
         overdueInvoicesCount={overdueInvoicesCount}
         dueSoonInvoicesCount={dueSoonInvoicesCount}
         isPunchActive={isPunchActive}
         activeSeconds={activeSeconds}
         onTogglePunch={handleTogglePunch}
       />
+
+      {/* Floating Global Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+            ✓
+          </div>
+          <span className="text-xs font-bold">{toastMessage}</span>
+        </div>
+      )}
 
       {/* Main Tab Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
@@ -543,10 +604,11 @@ export default function App() {
             invoices={invoices}
             tasks={tasks}
             onNavigateTab={setActiveTab}
-            onOpenAddTaskModal={() => {
-              setTaskModalEmpId(undefined);
+            onOpenAddTaskModal={(empId) => {
+              setTaskModalEmpId(empId);
               setShowTaskModal(true);
             }}
+            onUpdateTaskStatus={handleUpdateTaskStatus}
           />
         )}
 
@@ -560,6 +622,7 @@ export default function App() {
             onTogglePunch={handleTogglePunch}
             onStatusChange={handleStatusChange}
             onUpdateTaskStatus={handleUpdateTaskStatus}
+            onUpdateAvatar={handleUpdateAvatar}
           />
         )}
 
@@ -595,6 +658,7 @@ export default function App() {
               setTaskModalEmpId(empId);
               setShowTaskModal(true);
             }}
+            onUpdateTaskStatus={handleUpdateTaskStatus}
           />
         )}
 
@@ -603,6 +667,7 @@ export default function App() {
             employees={employees}
             onAddEmployee={handleAddEmployee}
             onRemoveEmployee={handleRemoveEmployee}
+            onUpdateEmployee={handleUpdateEmployee}
           />
         )}
 

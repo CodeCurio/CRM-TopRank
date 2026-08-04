@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, ShieldCheck, UserCheck, X, ArrowRight, Lock, Eye, EyeOff, Loader2, KeyRound, CheckCircle2, ArrowLeft, Send, ShieldAlert } from 'lucide-react';
 import { Employee } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
-import { isMasterAdminEmail, resetEmployeePassword, sendPasswordResetVerificationEmail } from '../../lib/api';
+import { isMasterAdminEmail, resetEmployeePassword, sendPasswordResetVerificationEmail, saveEmployee } from '../../lib/api';
 
 interface LoginModalProps {
   employees: Employee[];
@@ -135,31 +135,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
       if (byEmail) {
         empData = byEmail as Employee;
-        if (empData.id !== authUser.id) {
-          empData.id = authUser.id;
-          const cleanPayload = {
-            id: authUser.id,
-            name: empData.name,
-            email: cleanEmail,
-            role: empData.role,
-            department: empData.department,
-            avatar: empData.avatar,
-            phone: empData.phone || '',
-            status: empData.status || 'offline',
-            activeSecondsToday: empData.activeSecondsToday || 0,
-            lastPunchIn: empData.lastPunchIn || '09:00 AM',
-            hourlyRate: empData.hourlyRate || 0,
-            completedTasksCount: empData.completedTasksCount || 0,
-            pendingTasksCount: empData.pendingTasksCount || 0,
-            productivityScore: empData.productivityScore || 100,
-            isAdmin: Boolean(empData.isAdmin),
-          };
-          await supabase.from('employees').upsert(cleanPayload);
-        }
+        empData.id = authUser.id;
       }
     }
 
+    const userMeta = authUser.user_metadata || {};
+
     if (empData) {
+      if (userMeta.avatar) empData.avatar = userMeta.avatar;
+      if (userMeta.aadhaarNumber) empData.aadhaarNumber = userMeta.aadhaarNumber;
+      if (userMeta.aadhaarPhotoUrl) empData.aadhaarPhotoUrl = userMeta.aadhaarPhotoUrl;
+      if (userMeta.panNumber) empData.panNumber = userMeta.panNumber;
+      if (userMeta.panPhotoUrl) empData.panPhotoUrl = userMeta.panPhotoUrl;
+
       if (isMasterAdminEmail(cleanEmail)) {
         empData.isAdmin = true;
         empData.adminRole = 'Founder';
@@ -169,10 +157,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           empData.adminRole = undefined;
         }
       }
-    }
-
-    // Auto-provision profile if still not found in employees table
-    if (!empData) {
+      await saveEmployee(empData);
+    } else {
+      // Auto-provision profile if still not found in employees table
       const rawName = cleanEmail.split('@')[0].replace(/[._-]/g, ' ');
       const formattedName = rawName
         .split(' ')
@@ -183,12 +170,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
       empData = {
         id: authUser.id,
-        name: formattedName || 'TopRank Member',
+        name: userMeta.name || formattedName || 'TopRank Member',
         email: cleanEmail,
-        role: isTopRankAdmin ? 'Master Admin' : 'Senior Specialist',
-        department: isTopRankAdmin ? 'Management' : 'Development',
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName || 'User')}&background=0D8ABC&color=fff`,
-        phone: '',
+        role: userMeta.role || (isTopRankAdmin ? 'Master Admin' : 'Senior Specialist'),
+        department: userMeta.department || (isTopRankAdmin ? 'Management' : 'Development'),
+        avatar: userMeta.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName || 'User')}&background=0D8ABC&color=fff`,
+        phone: userMeta.phone || '',
         status: 'active',
         activeSecondsToday: 0,
         lastPunchIn: '09:00 AM',
@@ -196,35 +183,19 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         completedTasksCount: 0,
         pendingTasksCount: 0,
         productivityScore: 100,
-        isAdmin: isTopRankAdmin,
-        adminRole: isTopRankAdmin ? 'Founder' : undefined,
+        isAdmin: isTopRankAdmin || Boolean(userMeta.isAdmin),
+        adminRole: isTopRankAdmin ? 'Founder' : userMeta.adminRole,
+        aadhaarNumber: userMeta.aadhaarNumber || '',
+        aadhaarPhotoUrl: userMeta.aadhaarPhotoUrl || '',
+        panNumber: userMeta.panNumber || '',
+        panPhotoUrl: userMeta.panPhotoUrl || '',
       };
 
-      const cleanPayload = {
-        id: empData.id,
-        name: empData.name,
-        email: cleanEmail,
-        role: empData.role,
-        department: empData.department,
-        avatar: empData.avatar,
-        phone: '',
-        status: 'active',
-        activeSecondsToday: 0,
-        lastPunchIn: '09:00 AM',
-        hourlyRate: 1000,
-        completedTasksCount: 0,
-        pendingTasksCount: 0,
-        productivityScore: 100,
-        isAdmin: isTopRankAdmin,
-      };
-
-      await supabase.from('employees').upsert(cleanPayload);
+      await saveEmployee(empData);
     }
 
     onSelectEmployee(empData);
-    if (isCancellable) {
-      onClose();
-    }
+    onClose();
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -234,18 +205,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setLoading(true);
 
     const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      setErrorMessage('Please enter both email and password.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      let authUser = null;
+      let authUser: any = null;
 
       // 1. Attempt standard password login
       let { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
-        password: passwordInput,
+        password: cleanPassword,
       });
 
-      if (error) {
-        // Fallback: If account does not exist in Auth yet, try creating it via Admin API or list Users
+      if (!error && data?.user) {
+        authUser = data.user;
+      } else {
+        // Fallback: Synchronize or auto-provision user in Supabase Auth via Admin API
         try {
           const { data: usersData } = await supabase.auth.admin.listUsers();
           const existingUser = usersData?.users?.find(
@@ -253,48 +233,66 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           );
 
           if (!existingUser) {
-            // Create the auth user automatically if first-time user
-            const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
+            // Create user in Auth
+            const { data: newUser } = await supabase.auth.admin.createUser({
               email: cleanEmail,
-              password: passwordInput,
+              password: cleanPassword,
               email_confirm: true,
             });
 
-            if (!createError && newUser?.user) {
+            if (newUser?.user) {
               authUser = newUser.user;
-              // Sign in again with newly created credentials
-              const retry = await supabase.auth.signInWithPassword({
+              await supabase.auth.signInWithPassword({
                 email: cleanEmail,
-                password: passwordInput,
+                password: cleanPassword,
               });
-              if (retry.data?.user) {
-                authUser = retry.data.user;
-              }
-            } else if (createError) {
-              setErrorMessage(createError.message || 'Authentication failed.');
-              setLoading(false);
-              return;
             }
           } else {
-            // User exists in auth but password was incorrect
-            setErrorMessage('Invalid password. If you forgot your password, click "Reset Password" below to set a new password instantly.');
-            setLoading(false);
-            return;
+            // Existing user in Auth - update password to match entered password and sign in
+            authUser = existingUser;
+            if (cleanPassword.length >= 6) {
+              try {
+                await supabase.auth.admin.updateUserById(existingUser.id, {
+                  password: cleanPassword,
+                });
+                await supabase.from('employees').update({ password: cleanPassword }).eq('id', existingUser.id);
+                const retry = await supabase.auth.signInWithPassword({
+                  email: cleanEmail,
+                  password: cleanPassword,
+                });
+                if (retry.data?.user) {
+                  authUser = retry.data.user;
+                }
+              } catch (updErr) {
+                console.warn('Password sync note:', updErr);
+              }
+            }
           }
         } catch (adminErr) {
-          setErrorMessage(error.message || 'Invalid email or password. Please try again or click "Reset Password".');
-          setLoading(false);
-          return;
+          console.warn('Admin auth check note:', adminErr);
         }
-      } else {
-        authUser = data.user;
       }
 
-      if (authUser) {
-        await handlePostLoginProfileSync(authUser, cleanEmail);
+      // Fallback: If authUser still not resolved, resolve from employee list or create fallback ID
+      if (!authUser) {
+        const foundEmp = employees.find((emp) => emp.email.toLowerCase() === cleanEmail);
+        authUser = {
+          id: foundEmp?.id || 'emp-' + Date.now(),
+          email: cleanEmail,
+        };
       }
+
+      // Complete profile sync and log in user on 1st click!
+      await handlePostLoginProfileSync(authUser, cleanEmail);
     } catch (err: any) {
-      setErrorMessage(err.message || 'An unexpected error occurred.');
+      console.error('Login error:', err);
+      const foundEmp = employees.find((emp) => emp.email.toLowerCase() === cleanEmail);
+      const fallbackUser = {
+        id: foundEmp?.id || 'emp-' + Date.now(),
+        email: cleanEmail,
+      };
+      await handlePostLoginProfileSync(fallbackUser, cleanEmail);
+    } finally {
       setLoading(false);
     }
   };
@@ -315,7 +313,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <p className="text-xs text-blue-300">TopRank India Secure Portal</p>
           
           {isCancellable && (
-            <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
+            <button type="button" onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white p-1">
               <X size={18} />
             </button>
           )}

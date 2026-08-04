@@ -2,15 +2,16 @@ import React, { useState, useRef } from 'react';
 import { 
   UserPlus, UserMinus, ShieldCheck, Mail, Briefcase, Phone, Save, X, Activity, 
   Upload, CreditCard, Eye, EyeOff, CheckCircle, Copy, Printer, Lock, FileText, 
-  Building2, Key, Sparkles, Image as ImageIcon, RefreshCw, KeyRound, Trash2
+  Building2, Key, Sparkles, Image as ImageIcon, RefreshCw, KeyRound, Trash2, Pencil
 } from 'lucide-react';
 import { Employee, AdminRole, Department } from '../../types';
-import { resetEmployeePassword, isMasterAdminEmail } from '../../lib/api';
+import { resetEmployeePassword, isMasterAdminEmail, saveEmployee } from '../../lib/api';
 
 interface EmployeeManagementProps {
   employees: Employee[];
   onAddEmployee: (emp: Employee) => void;
   onRemoveEmployee: (id: string) => void;
+  onUpdateEmployee?: (emp: Employee) => void;
 }
 
 const MNC_DEPARTMENTS: Department[] = [
@@ -26,13 +27,24 @@ const MNC_DEPARTMENTS: Department[] = [
   'Product & Engineering',
 ];
 
-export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employees, onAddEmployee, onRemoveEmployee }) => {
+export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ 
+  employees, 
+  onAddEmployee, 
+  onRemoveEmployee,
+  onUpdateEmployee 
+}) => {
   const [showAddForm, setShowAddForm] = useState(false);
   
   // Toggles for sensitive fields
   const [showPassword, setShowPassword] = useState(false);
   const [showAadhaar, setShowAadhaar] = useState<Record<string, boolean>>({});
   const [copiedCredentials, setCopiedCredentials] = useState(false);
+
+  // Edit Employee state
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [editSuccessMsg, setEditSuccessMsg] = useState<string>('');
 
   // New employee created credentials modal
   const [createdCredentials, setCreatedCredentials] = useState<{
@@ -61,6 +73,11 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
   const fileInputRef = useRef<HTMLInputElement>(null);
   const aadhaarFileInputRef = useRef<HTMLInputElement>(null);
   const panFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Edit form refs
+  const editAvatarRef = useRef<HTMLInputElement>(null);
+  const editAadhaarRef = useRef<HTMLInputElement>(null);
+  const editPanRef = useRef<HTMLInputElement>(null);
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$';
@@ -130,6 +147,107 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
         setNewEmployee((prev) => ({ ...prev, panPhotoUrl: reader.result as string }));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenEditModal = (emp: Employee) => {
+    setEditingEmployee(emp);
+    setEditFormData({
+      ...emp,
+      panNumber: (emp.panNumber || '').toUpperCase(),
+    });
+    setEditSuccessMsg('');
+  };
+
+  const handleEditAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditFormData((prev) => ({ ...prev, avatar: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditAadhaarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Aadhaar photo size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditFormData((prev) => ({ ...prev, aadhaarPhotoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditPanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("PAN photo size should be less than 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditFormData((prev) => ({ ...prev, panPhotoUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveEditedEmployee = async () => {
+    if (!editingEmployee || !editFormData.name || !editFormData.email || !editFormData.role) {
+      alert("Please enter Name, Email, and Role.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditSuccessMsg('');
+
+    const updatedEmp: Employee = {
+      ...editingEmployee,
+      name: editFormData.name.trim(),
+      email: editFormData.email.trim().toLowerCase(),
+      role: editFormData.role.trim(),
+      department: editFormData.department || 'Development',
+      phone: editFormData.phone || '',
+      hourlyRate: editingEmployee.hourlyRate || 0,
+      avatar: editFormData.avatar || editingEmployee.avatar,
+      aadhaarNumber: editFormData.aadhaarNumber || '',
+      aadhaarPhotoUrl: editFormData.aadhaarPhotoUrl || '',
+      panNumber: (editFormData.panNumber || '').toUpperCase(),
+      panPhotoUrl: editFormData.panPhotoUrl || '',
+      password: editFormData.password || editingEmployee.password,
+      isAdmin: Boolean(editFormData.isAdmin),
+      adminRole: editFormData.isAdmin ? (editFormData.adminRole || 'Co-Founder') : undefined,
+    };
+
+    try {
+      await saveEmployee(updatedEmp);
+      if (onUpdateEmployee) {
+        onUpdateEmployee(updatedEmp);
+      } else {
+        onAddEmployee(updatedEmp);
+      }
+      setEditSuccessMsg(`Successfully updated profile & details for ${updatedEmp.name}!`);
+      setTimeout(() => {
+        setEditingEmployee(null);
+        setEditFormData({});
+        setEditSuccessMsg('');
+      }, 1200);
+    } catch (err: any) {
+      alert(`Failed to save changes: ${err?.message || err}`);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -520,18 +638,6 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
               <p className="text-[10px] text-slate-500 mt-1">This password will be assigned for the employee to sign in.</p>
             </div>
 
-            {/* Hourly Billing Rate */}
-            <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hourly Billing Rate (₹)</label>
-              <input
-                type="number"
-                value={newEmployee.hourlyRate || ''}
-                onChange={(e) => setNewEmployee({ ...newEmployee, hourlyRate: parseFloat(e.target.value) || 0 })}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
-                placeholder="1200"
-              />
-            </div>
-
             {/* Admin Level Selection */}
             <div className="md:col-span-2 lg:col-span-3 space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -745,6 +851,15 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
 
                   <td className="px-4 py-3.5 text-right align-middle">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => handleOpenEditModal(emp)}
+                        className="text-amber-600 hover:text-amber-800 hover:bg-amber-50 p-2 rounded-xl transition-colors flex items-center gap-1 text-xs font-semibold"
+                        title="Edit Employee Profile & Documents"
+                      >
+                        <Pencil size={15} />
+                        <span className="hidden lg:inline text-[11px]">Edit</span>
+                      </button>
+
                       <button
                         onClick={() => {
                           setResetModalEmp(emp);
@@ -1068,6 +1183,346 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ employee
             >
               Understand & Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Staff Details Modal */}
+      {editingEmployee && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <Pencil size={20} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Edit Employee Profile & Documents</h3>
+                  <p className="text-xs text-slate-500">Update staff details, Aadhaar & PAN card, photo, and access levels</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingEmployee(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {editSuccessMsg && (
+              <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 p-3 rounded-xl font-semibold text-xs flex items-center gap-2 mb-5">
+                <CheckCircle size={16} className="text-emerald-600 shrink-0" />
+                <span>{editSuccessMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              {/* Profile Photo & Personal Info */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div className="relative group shrink-0">
+                  <img
+                    src={editFormData.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=250'}
+                    alt="Staff Avatar"
+                    className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md"
+                  />
+                  <input
+                    type="file"
+                    ref={editAvatarRef}
+                    onChange={handleEditAvatarChange}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => editAvatarRef.current?.click()}
+                    className="absolute inset-0 bg-slate-900/50 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
+                  >
+                    <Upload size={16} />
+                    Change
+                  </button>
+                </div>
+                <div className="w-full space-y-1">
+                  <h4 className="font-bold text-slate-900 text-sm">Staff Profile Image</h4>
+                  <p className="text-xs text-slate-500">Click avatar image to upload a new photo from computer (JPEG, PNG, max 5MB)</p>
+                  <button
+                    type="button"
+                    onClick={() => editAvatarRef.current?.click()}
+                    className="mt-2 text-xs font-bold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1 rounded-lg transition-colors border border-amber-300 inline-flex items-center gap-1.5"
+                  >
+                    <Upload size={13} /> Upload New Photo
+                  </button>
+                </div>
+              </div>
+
+              {/* Basic Fields Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="Employee Full Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Email Address <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={editFormData.email || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="email@company.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    value={editFormData.phone || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Department</label>
+                  <select
+                    value={editFormData.department || 'Development'}
+                    onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value as Department })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500"
+                  >
+                    {MNC_DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Job Role / Designation <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editFormData.role || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-amber-500"
+                    placeholder="e.g. Senior MERN Stack Developer"
+                  />
+                </div>
+              </div>
+
+              {/* Login Password Edit */}
+              <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <Key size={14} className="text-amber-700" />
+                    Account Login Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditFormData({ ...editFormData, password: generateRandomPassword() })}
+                    className="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline"
+                  >
+                    Auto-Generate New Password
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={editFormData.password || ''}
+                  onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                  className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 font-mono text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-600"
+                  placeholder="TR@Password"
+                />
+                <p className="text-[11px] text-amber-800/80">Updating password here syncs immediately with Supabase Authentication.</p>
+              </div>
+
+              {/* Government ID & Document Photos */}
+              <div className="space-y-4 pt-2 border-t border-slate-200">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <CreditCard size={14} className="text-emerald-600" />
+                  Government Identification & Documents
+                </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Aadhaar */}
+                  <div className="bg-emerald-50/50 p-3.5 rounded-xl border border-emerald-200 space-y-2">
+                    <label className="text-xs font-bold text-emerald-900 block">Aadhaar Card Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.aadhaarNumber || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, aadhaarNumber: e.target.value })}
+                      className="w-full bg-white border border-emerald-300 font-mono rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-600"
+                      placeholder="XXXX-XXXX-1234"
+                    />
+
+                    <div className="pt-1 flex items-center justify-between gap-2">
+                      <input
+                        type="file"
+                        ref={editAadhaarRef}
+                        onChange={handleEditAadhaarChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => editAadhaarRef.current?.click()}
+                        className="text-xs font-bold text-emerald-800 bg-white hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300 inline-flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Upload size={13} /> Upload Aadhaar Photo
+                      </button>
+
+                      {editFormData.aadhaarPhotoUrl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setViewDocModal({
+                              docTitle: 'Aadhaar Card Photo',
+                              docNumber: editFormData.aadhaarNumber || 'Attached',
+                              docPhotoUrl: editFormData.aadhaarPhotoUrl,
+                              employeeName: editFormData.name || 'Staff',
+                            })
+                          }
+                          className="text-[11px] font-bold text-emerald-900 underline flex items-center gap-1"
+                        >
+                          <Eye size={12} /> View Photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PAN Card */}
+                  <div className="bg-blue-50/50 p-3.5 rounded-xl border border-blue-200 space-y-2">
+                    <label className="text-xs font-bold text-blue-900 block">PAN Card Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.panNumber || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, panNumber: e.target.value.toUpperCase() })}
+                      className="w-full bg-white border border-blue-300 font-mono rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-600 uppercase"
+                      placeholder="ABCDE1234F"
+                    />
+
+                    <div className="pt-1 flex items-center justify-between gap-2">
+                      <input
+                        type="file"
+                        ref={editPanRef}
+                        onChange={handleEditPanChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => editPanRef.current?.click()}
+                        className="text-xs font-bold text-blue-800 bg-white hover:bg-blue-100 px-3 py-1.5 rounded-lg border border-blue-300 inline-flex items-center gap-1.5 shadow-xs"
+                      >
+                        <Upload size={13} /> Upload PAN Photo
+                      </button>
+
+                      {editFormData.panPhotoUrl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setViewDocModal({
+                              docTitle: 'PAN Card Photo',
+                              docNumber: editFormData.panNumber || 'Attached',
+                              docPhotoUrl: editFormData.panPhotoUrl,
+                              employeeName: editFormData.name || 'Staff',
+                            })
+                          }
+                          className="text-[11px] font-bold text-blue-900 underline flex items-center gap-1"
+                        >
+                          <Eye size={12} /> View Photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Privileges */}
+              <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editFormData.isAdmin || false}
+                    onChange={(e) => setEditFormData({ ...editFormData, isAdmin: e.target.checked })}
+                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <span className="text-sm font-bold text-slate-800">Grant Executive Admin Privileges</span>
+                </label>
+
+                {editFormData.isAdmin && (
+                  <div className="ml-6 space-y-2 pt-2 border-t border-slate-200">
+                    <span className="text-xs font-bold text-slate-500 uppercase block">Select Admin Level:</span>
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editAdminRole"
+                          value="Founder"
+                          checked={editFormData.adminRole === 'Founder'}
+                          onChange={() => setEditFormData({ ...editFormData, adminRole: 'Founder' })}
+                          className="text-amber-600 focus:ring-amber-500"
+                        />
+                        <span className="font-bold text-amber-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                          👑 Founder
+                        </span>
+                        <span className="text-slate-500 text-[11px]">(Unrestricted master privileges)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="editAdminRole"
+                          value="Co-Founder"
+                          checked={editFormData.adminRole === 'Co-Founder'}
+                          onChange={() => setEditFormData({ ...editFormData, adminRole: 'Co-Founder' })}
+                          className="text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="font-bold text-indigo-900 bg-indigo-50 px-2 py-1 rounded border border-indigo-200">
+                          🛡️ Co-Founder
+                        </span>
+                        <span className="text-slate-500 text-[11px]">(Full admin operations)</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex justify-end gap-3 pt-5 border-t border-slate-100 mt-6">
+              <button
+                type="button"
+                onClick={() => setEditingEmployee(null)}
+                className="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingEdit}
+                onClick={handleSaveEditedEmployee}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
+              >
+                {isSavingEdit ? (
+                  <RefreshCw size={15} className="animate-spin" />
+                ) : (
+                  <Save size={15} />
+                )}
+                {isSavingEdit ? 'Saving Changes...' : 'Save Employee Details'}
+              </button>
+            </div>
           </div>
         </div>
       )}

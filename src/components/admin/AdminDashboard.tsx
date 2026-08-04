@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ShieldCheck,
   TrendingUp,
@@ -12,6 +12,11 @@ import {
   ArrowRight,
   Zap,
   BarChart3,
+  Search,
+  Filter,
+  Check,
+  Calendar,
+  UserCheck,
 } from 'lucide-react';
 import {
   BarChart,
@@ -25,7 +30,7 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { Employee, Project, Invoice, Task } from '../../types';
+import { Employee, Project, Invoice, Task, WorkStatus } from '../../types';
 import { formatCurrency, formatSecondsToHM, getInvoiceUrgency } from '../../utils/formatters';
 
 interface AdminDashboardProps {
@@ -34,7 +39,8 @@ interface AdminDashboardProps {
   invoices: Invoice[];
   tasks: Task[];
   onNavigateTab: (tab: string) => void;
-  onOpenAddTaskModal: () => void;
+  onOpenAddTaskModal: (empId?: string) => void;
+  onUpdateTaskStatus?: (taskId: string, newStatus: WorkStatus) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -44,7 +50,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   tasks,
   onNavigateTab,
   onOpenAddTaskModal,
+  onUpdateTaskStatus,
 }) => {
+  const [taskSearch, setTaskSearch] = useState('');
+  const [selectedEmpFilter, setSelectedEmpFilter] = useState<string>('ALL');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('ALL');
+
   // Compute Key Financial Metrics
   const totalBilled = invoices.reduce((sum, inv) => sum + inv.amountTotal, 0);
   const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
@@ -61,6 +72,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const avgProductivity = Math.round(
     employees.reduce((acc, e) => acc + e.productivityScore, 0) / (employees.length || 1)
   );
+
+  // Filter Tasks for Admin Master Tracker
+  const filteredTasks = tasks.filter((task) => {
+    // Employee Filter
+    if (selectedEmpFilter !== 'ALL') {
+      const targetEmp = employees.find((e) => e.id === selectedEmpFilter);
+      if (targetEmp) {
+        const matchesId = task.assignedEmployeeId === targetEmp.id;
+        const matchesEmail =
+          task.assignedEmployeeEmail &&
+          targetEmp.email &&
+          task.assignedEmployeeEmail.toLowerCase() === targetEmp.email.toLowerCase();
+        const matchesName =
+          task.assignedEmployeeName &&
+          targetEmp.name &&
+          task.assignedEmployeeName.toLowerCase() === targetEmp.name.toLowerCase();
+        if (!matchesId && !matchesEmail && !matchesName) return false;
+      }
+    }
+
+    // Status Filter
+    if (selectedStatusFilter !== 'ALL') {
+      if (selectedStatusFilter === 'PENDING') {
+        if (task.status === 'Completed') return false;
+      } else if (task.status !== selectedStatusFilter) {
+        return false;
+      }
+    }
+
+    // Search query
+    if (taskSearch.trim()) {
+      const q = taskSearch.toLowerCase();
+      const titleMatch = task.title.toLowerCase().includes(q);
+      const clientMatch = (task.clientName || '').toLowerCase().includes(q);
+      const empMatch = (task.assignedEmployeeName || '').toLowerCase().includes(q);
+      if (!titleMatch && !clientMatch && !empMatch) return false;
+    }
+
+    return true;
+  });
 
   // Compute Task Distribution for Recharts
   const taskStatusCounts = {
@@ -307,6 +358,221 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* All Assigned Work & Employee Deliverables Tracker (Admin View) */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 text-slate-900 shadow-sm space-y-5">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                <Briefcase size={20} className="text-blue-600" />
+                All Assigned Work & Staff Deliverables Tracker
+              </h3>
+              <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+                {tasks.length} Total Tasks
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Track work assigned to employees, view completion updates live, and assign new tasks.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            <button
+              onClick={() => onOpenAddTaskModal()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0"
+            >
+              <Plus size={15} /> Assign Work
+            </button>
+
+            {/* Filter by Employee Dropdown */}
+            <select
+              value={selectedEmpFilter}
+              onChange={(e) => setSelectedEmpFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+            >
+              <option value="ALL">All Staff / Employees</option>
+              {employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name} ({e.role})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Search & Status Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-200">
+          <div className="relative w-full sm:w-72">
+            <Search size={15} className="absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search work title, staff name, client..."
+              value={taskSearch}
+              onChange={(e) => setTaskSearch(e.target.value)}
+              className="w-full bg-white border border-slate-300 text-xs font-semibold text-slate-900 rounded-xl pl-9 pr-3 py-2 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 overflow-x-auto w-full sm:w-auto">
+            {[
+              { label: 'ALL', key: 'ALL' },
+              { label: 'TO DO', key: 'To Do' },
+              { label: 'IN PROGRESS', key: 'In Progress' },
+              { label: 'REVIEW', key: 'Review' },
+              { label: 'COMPLETED', key: 'Completed' },
+            ].map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setSelectedStatusFilter(f.key)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap ${
+                  selectedStatusFilter === f.key
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Task Cards List / Table */}
+        <div className="space-y-3">
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 bg-slate-50 rounded-2xl border border-slate-200">
+              <UserCheck size={36} className="mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-sm text-slate-700">No assigned work matching filters</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Assign work to your staff using the "Assign Work" button above.
+              </p>
+            </div>
+          ) : (
+            filteredTasks.map((task) => {
+              const isCompleted = task.status === 'Completed';
+              const assignedEmp = employees.find(
+                (e) =>
+                  e.id === task.assignedEmployeeId ||
+                  (e.email && task.assignedEmployeeEmail && e.email.toLowerCase() === task.assignedEmployeeEmail.toLowerCase()) ||
+                  (e.name && task.assignedEmployeeName && e.name.toLowerCase() === task.assignedEmployeeName.toLowerCase())
+              );
+
+              return (
+                <div
+                  key={task.id}
+                  className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                    isCompleted
+                      ? 'bg-emerald-50/40 border-emerald-200'
+                      : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
+                  }`}
+                >
+                  {/* Task Info & Assignee */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                        isCompleted
+                          ? 'bg-emerald-100 text-emerald-700 font-bold'
+                          : task.status === 'In Progress'
+                          ? 'bg-blue-100 text-blue-700 font-bold'
+                          : 'bg-amber-100 text-amber-700 font-bold'
+                      }`}
+                    >
+                      {isCompleted ? <Check size={18} /> : <Briefcase size={18} />}
+                    </div>
+
+                    <div className="space-y-1 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            task.priority === 'Urgent'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : task.priority === 'High'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-blue-100 text-blue-800 border border-blue-300'
+                          }`}
+                        >
+                          {task.priority} Priority
+                        </span>
+
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            isCompleted
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : task.status === 'In Progress'
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                              : task.status === 'Review'
+                              ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                              : 'bg-slate-100 text-slate-700 border border-slate-300'
+                          }`}
+                        >
+                          {task.status}
+                        </span>
+
+                        {task.category && (
+                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                            {task.category}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className={`font-bold text-sm ${isCompleted ? 'text-slate-600 line-through' : 'text-slate-900'}`}>
+                        {task.title}
+                      </h4>
+
+                      {task.description && (
+                        <p className="text-xs text-slate-500 line-clamp-2">{task.description}</p>
+                      )}
+
+                      <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1 flex-wrap">
+                        <span>Client: <strong className="text-slate-800">{task.clientName || 'General Work'}</strong></span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-slate-700">
+                          <Calendar size={12} className="text-slate-400" />
+                          Due: <strong className="text-slate-900 font-mono">{task.dueDate}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Assigned Employee Badge & Status Control */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0 self-end md:self-center border-t md:border-t-0 border-slate-100 pt-3 md:pt-0 w-full md:w-auto justify-between">
+                    {/* Assigned Employee Details */}
+                    <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                      <img
+                        src={assignedEmp?.avatar || task.assignedEmployeeAvatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80'}
+                        alt={task.assignedEmployeeName}
+                        className="w-7 h-7 rounded-lg object-cover ring-1 ring-slate-300"
+                      />
+                      <div className="text-left">
+                        <p className="text-[11px] font-bold text-slate-900 leading-tight">
+                          {task.assignedEmployeeName}
+                        </p>
+                        <p className="text-[9px] text-slate-500 leading-tight truncate">
+                          {assignedEmp?.role || 'Assigned Staff'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Status Dropdown Override for Admin */}
+                    {onUpdateTaskStatus && (
+                      <select
+                        value={task.status}
+                        onChange={(e) => onUpdateTaskStatus(task.id, e.target.value as WorkStatus)}
+                        className="bg-white border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-2.5 py-2 focus:outline-none focus:border-blue-500 shadow-2xs"
+                      >
+                        <option value="To Do">Status: To Do</option>
+                        <option value="In Progress">Status: In Progress</option>
+                        <option value="Review">Status: Under Review</option>
+                        <option value="Completed">Status: Completed ✓</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

@@ -15,9 +15,11 @@ import {
   Sparkles,
   UserPlus,
   BarChart3,
+  Camera,
 } from 'lucide-react';
 import { Employee } from '../types';
 import { formatSecondsDigital } from '../utils/formatters';
+import { EditProfilePicModal } from './shared/EditProfilePicModal';
 
 interface HeaderProps {
   currentEmployee: Employee;
@@ -27,6 +29,7 @@ interface HeaderProps {
   onSwitchUser: (emp: Employee) => void;
   onOpenLoginModal: () => void;
   onLogout?: () => void; // Added optional onLogout
+  onUpdateAvatar?: (newAvatarUrl: string) => Promise<void> | void;
   overdueInvoicesCount: number;
   dueSoonInvoicesCount: number;
   isPunchActive: boolean;
@@ -42,6 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSwitchUser,
   onOpenLoginModal,
   onLogout,
+  onUpdateAvatar,
   overdueInvoicesCount,
   dueSoonInvoicesCount,
   isPunchActive,
@@ -49,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   onTogglePunch,
 }) => {
   const [showUserDropdown, setShowUserDropdown] = React.useState(false);
+  const [showEditPicModal, setShowEditPicModal] = React.useState(false);
 
   const totalUrgentAlerts = overdueInvoicesCount + dueSoonInvoicesCount;
 
@@ -82,23 +87,14 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Quick Stats Pill */}
-          <div className="hidden lg:flex items-center gap-3 bg-slate-800/80 px-3.5 py-1.5 rounded-lg border border-slate-700/60 text-xs text-slate-300">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Portal Active
-            </div>
-            <span className="text-slate-600">|</span>
-            <div className="text-slate-300">
-              Active Time Today:{' '}
-              <span className="font-mono font-bold text-amber-400">
-                {formatSecondsDigital(activeSeconds)}
-              </span>
-            </div>
+          {/* Quick Status Pill */}
+          <div className="hidden lg:flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/60 text-xs text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-emerald-400 font-medium">TopRank Work Portal Active</span>
           </div>
         </div>
 
-        {/* Right Section: Time Tracker, Due Date Blinking Alert & Profile Selector */}
+        {/* Right Section: Due Date Alert & Profile Selector */}
         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
           {/* Urgent Payment Due Alert Badge */}
           {currentEmployee.isAdmin && (
@@ -127,19 +123,6 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </button>
           )}
-
-          {/* Live Punch Clock Toggle Button */}
-          <button
-            onClick={onTogglePunch}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md ${
-              isPunchActive
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/40'
-                : 'bg-amber-600 hover:bg-amber-500 text-white border border-amber-400/40'
-            }`}
-          >
-            <Clock size={14} className={isPunchActive ? 'animate-spin' : ''} />
-            <span>{isPunchActive ? 'PUNCHED IN' : 'PUNCH OUT'}</span>
-          </button>
 
           {/* User Profile / Persona Selector */}
           <div className="relative">
@@ -181,7 +164,23 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="text-xs text-blue-400">{currentEmployee.email}</p>
                 </div>
 
-                <div className="border-t border-slate-800 pt-2 mt-1">
+                {onUpdateAvatar && (
+                  <div className="py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setShowEditPicModal(true);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg text-xs text-blue-300 hover:text-white hover:bg-slate-800 flex items-center gap-2 font-medium transition-colors"
+                    >
+                      <Camera size={14} className="text-blue-400" />
+                      Edit Profile Picture
+                    </button>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-800 pt-1 mt-1">
                   <button
                     onClick={() => {
                       setShowUserDropdown(false);
@@ -202,6 +201,16 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Picture Modal */}
+      {showEditPicModal && onUpdateAvatar && (
+        <EditProfilePicModal
+          isOpen={showEditPicModal}
+          onClose={() => setShowEditPicModal(false)}
+          currentEmployee={currentEmployee}
+          onUpdateAvatar={onUpdateAvatar}
+        />
+      )}
 
       {/* Navigation Tabs Bar */}
       <div className="bg-slate-950/90 border-t border-slate-800/80 px-4 sm:px-6 lg:px-8">
@@ -265,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({
             Work Progress & Projects
           </button>
 
-          {/* Employee Monitoring */}
+          {/* Employee Work Inspector */}
           {currentEmployee.isAdmin && (
             <button
               onClick={() => setActiveTab('monitoring')}
@@ -276,7 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Users size={15} />
-              Employee Active Time Tracker
+              Staff Work Inspector & Tasks
             </button>
           )}
 
