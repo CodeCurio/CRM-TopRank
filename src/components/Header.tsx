@@ -254,7 +254,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <FileText size={15} />
-              Client Ledger & Invoices
+              Billing & Invoice
               {overdueInvoicesCount > 0 && (
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
               )}

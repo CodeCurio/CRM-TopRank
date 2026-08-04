@@ -20,6 +20,7 @@ import {
   LedgerEntry,
   WorkStatus,
   EmployeePresenceStatus,
+  AgencyService,
 } from './types';
 import { Header } from './components/Header';
 import { AdminDashboard } from './components/admin/AdminDashboard';
@@ -38,7 +39,7 @@ import { getInvoiceUrgency } from './utils/formatters';
 import { 
   fetchAllData, seedDatabase, saveEmployee, deleteEmployee, saveProject, saveTask, 
   saveInvoice, deleteInvoice, saveLedgerEntry, saveDiscussion, saveMeeting,
-  isMasterAdminEmail
+  isMasterAdminEmail, fetchServicesFromSupabase, saveServiceToSupabase
 } from './lib/api';
 
 export default function App() {
@@ -54,6 +55,7 @@ export default function App() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [discussions, setDiscussions] = useState<TeamDiscussion[]>([]);
   const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+  const [services, setServices] = useState<AgencyService[]>([]);
 
   const [activeTab, setActiveTab] = useState<string>('admin');
 
@@ -86,6 +88,9 @@ export default function App() {
         setMeetings(data.meetings);
         setDiscussions(data.discussions);
         setLedger(data.ledger);
+
+        const loadedServices = await fetchServicesFromSupabase();
+        setServices(loadedServices);
 
         const { supabase } = await import('./lib/supabaseClient');
         const { data: { session } } = await supabase.auth.getSession();
@@ -442,6 +447,16 @@ export default function App() {
     } catch (e) {}
   };
 
+  // Handle Adding / Managing Agency Service
+  const handleAddService = async (newService: AgencyService) => {
+    setServices((prev) => [newService, ...prev.filter((s) => s.id !== newService.id)]);
+    try {
+      await saveServiceToSupabase(newService);
+    } catch (e) {
+      console.warn('Error saving service:', e);
+    }
+  };
+
   // Handle Updating Task Status or Logged Hours
   const handleUpdateTaskStatus = async (
     taskId: string,
@@ -630,12 +645,15 @@ export default function App() {
           <ClientFinancialsLedger
             invoices={invoices}
             ledger={ledger}
+            employees={employees}
+            services={services}
             currentEmployee={currentEmployee}
             onAddInvoice={handleAddInvoice}
             onUpdateInvoice={handleUpdateInvoice}
             onDeleteInvoice={handleDeleteInvoice}
             onRecordPayment={handleRecordPayment}
             onPrintInvoice={(inv) => setPrintInvoice(inv)}
+            onAddService={handleAddService}
           />
         )}
 

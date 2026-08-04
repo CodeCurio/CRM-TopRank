@@ -20,30 +20,38 @@ import {
   Trash2,
   ShieldCheck,
   User,
+  Settings,
+  Sparkles,
 } from 'lucide-react';
-import { Invoice, LedgerEntry, InvoiceStatus, Employee } from '../../types';
+import { Invoice, LedgerEntry, InvoiceStatus, Employee, AgencyService } from '../../types';
 import { formatCurrency, getDaysUntilDue, getInvoiceUrgency } from '../../utils/formatters';
 
 interface ClientFinancialsLedgerProps {
   invoices: Invoice[];
   ledger: LedgerEntry[];
+  employees?: Employee[];
+  services?: AgencyService[];
   currentEmployee?: Employee;
   onAddInvoice: (inv: Invoice) => void;
   onUpdateInvoice?: (inv: Invoice) => void;
   onDeleteInvoice?: (id: string) => void;
   onRecordPayment: (invoiceId: string, amount: number, method: string, reference: string) => void;
   onPrintInvoice: (inv: Invoice) => void;
+  onAddService?: (service: AgencyService) => void;
 }
 
 export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
   invoices,
   ledger,
+  employees = [],
+  services = [],
   currentEmployee,
   onAddInvoice,
   onUpdateInvoice,
   onDeleteInvoice,
   onRecordPayment,
   onPrintInvoice,
+  onAddService,
 }) => {
   const isFounder = currentEmployee?.adminRole === 'Founder' || (!currentEmployee?.adminRole && currentEmployee?.isAdmin);
   const isCoFounder = currentEmployee?.adminRole === 'Co-Founder';
@@ -52,17 +60,46 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showServiceModal, setShowServiceModal] = useState(false);
   const [paymentModalInvoice, setPaymentModalInvoice] = useState<Invoice | null>(null);
 
-  // Edit Invoice Modal State (Founder only)
+  // Agency Service Creation State
+  const [srvName, setSrvName] = useState('');
+  const [srvDept, setSrvDept] = useState('Ads');
+  const [srvPrice, setSrvPrice] = useState<number>(50000);
+  const [srvDesc, setSrvDesc] = useState('');
+
+  // Edit Invoice Modal State (Full editing capabilities)
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [editClientName, setEditClientName] = useState('');
+  const [editClientEmail, setEditClientEmail] = useState('');
+  const [editClientCompany, setEditClientCompany] = useState('');
+  const [editClientAddress, setEditClientAddress] = useState('');
+  const [editClientUrl, setEditClientUrl] = useState('');
+  const [editClientGstin, setEditClientGstin] = useState('');
+  const [editAgencyBranch, setEditAgencyBranch] = useState<'Chandigarh' | 'Lucknow'>('Chandigarh');
   const [editProjectName, setEditProjectName] = useState('');
+  const [editDepartmentCategory, setEditDepartmentCategory] = useState('Ads');
   const [editIssueDate, setEditIssueDate] = useState('');
   const [editDueDate, setEditDueDate] = useState('');
-  const [editAmountTotal, setEditAmountTotal] = useState<number>(0);
+  const [editDiscountPercent, setEditDiscountPercent] = useState<number>(0);
+  const [editGstPercent, setEditGstPercent] = useState<number>(18);
+  const [editBillingAuthority, setEditBillingAuthority] = useState('');
+  const [editIncludeSignature, setEditIncludeSignature] = useState<boolean>(true);
+  const [editReferredBy, setEditReferredBy] = useState('');
   const [editAmountPaid, setEditAmountPaid] = useState<number>(0);
   const [editStatus, setEditStatus] = useState<InvoiceStatus>('Pending');
+  const [editItemsList, setEditItemsList] = useState<{ id: string; serviceId?: string; description: string; department: string; qty: number; unitPrice: number }[]>([]);
+
+  // Delete Invoice Confirmation Modal State
+  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+
+  // Helper for dynamic future date (+15 days)
+  const getFutureDateFormatted = (days = 15) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
 
   // Payment Modal State
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
@@ -70,6 +107,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
   const [paymentRef, setPaymentRef] = useState('');
 
   // New Invoice Form State
+  const [selectedBilledEmpId, setSelectedBilledEmpId] = useState(currentEmployee?.id || '');
   const [newClientName, setNewClientName] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
   const [newClientCompany, setNewClientCompany] = useState('');
@@ -77,18 +115,28 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
   const [newClientUrl, setNewClientUrl] = useState('');
   const [newProjectName, setNewProjectName] = useState('');
   const [newDepartmentCategory, setNewDepartmentCategory] = useState('Ads');
-  const [newDueDate, setNewDueDate] = useState('2026-08-15');
+  const [newDueDate, setNewDueDate] = useState(getFutureDateFormatted(15));
   const [newDiscountPercent, setNewDiscountPercent] = useState<number>(0);
   const [newGstPercent, setNewGstPercent] = useState<number>(18);
-  const [newReferredBy, setNewReferredBy] = useState('');
-  const [newBillingAuthority, setNewBillingAuthority] = useState('Rajesh Malhotra — Director of Billing');
+
+  // Referral Dropdown State
+  const [referredByType, setReferredByType] = useState<'EMPLOYEE' | 'CLIENT' | 'CUSTOM'>('EMPLOYEE');
+  const [selectedRefEmp, setSelectedRefEmp] = useState('');
+  const [selectedRefClient, setSelectedRefClient] = useState('');
+  const [customRefText, setCustomRefText] = useState('');
+
+  const [newBillingAuthority, setNewBillingAuthority] = useState('');
   const [newIncludeSignature, setNewIncludeSignature] = useState<boolean>(true);
   const [newClientGstin, setNewClientGstin] = useState('');
+  const [newAgencyBranch, setNewAgencyBranch] = useState<'Chandigarh' | 'Lucknow'>('Chandigarh');
   
-  // Dynamic line items state
-  const [itemsList, setItemsList] = useState<{ id: string; description: string; department: string; qty: number; unitPrice: number }[]>([
-    { id: 'item-1', description: 'Digital Ads & Media Campaign Optimization', department: 'Ads', qty: 1, unitPrice: 50000 }
+  // Dynamic line items state with optional serviceId
+  const [itemsList, setItemsList] = useState<{ id: string; serviceId?: string; description: string; department: string; qty: number; unitPrice: number }[]>([
+    { id: 'item-1', description: 'Google & Meta Ads Campaign Optimization', department: 'Ads', qty: 1, unitPrice: 50000 }
   ]);
+
+  // Unique clients list for referral dropdown
+  const uniqueClients = Array.from(new Set(invoices.map((inv) => inv.clientName).filter(Boolean)));
 
   // Calculate totals
   const totalBilled = invoices.reduce((sum, inv) => sum + inv.amountTotal, 0);
@@ -123,22 +171,50 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
   const handleOpenEditModal = (inv: Invoice) => {
     setEditingInvoice(inv);
-    setEditClientName(inv.clientName);
-    setEditProjectName(inv.projectName);
-    setEditIssueDate(inv.issueDate);
-    setEditDueDate(inv.dueDate);
-    setEditAmountTotal(inv.amountTotal);
-    setEditAmountPaid(inv.amountPaid);
-    setEditStatus(inv.status);
+    setEditClientName(inv.clientName || '');
+    setEditClientCompany(inv.clientCompany || '');
+    setEditClientEmail(inv.clientEmail || '');
+    setEditClientAddress(inv.clientAddress || '');
+    setEditClientUrl(inv.clientUrl || '');
+    setEditClientGstin(inv.clientGstin || '');
+    setEditAgencyBranch((inv.agencyBranch as 'Chandigarh' | 'Lucknow') || 'Chandigarh');
+    setEditProjectName(inv.projectName || '');
+    setEditDepartmentCategory(inv.departmentCategory || 'Ads');
+    setEditIssueDate(inv.issueDate || new Date().toISOString().split('T')[0]);
+    setEditDueDate(inv.dueDate || getFutureDateFormatted(15));
+    setEditDiscountPercent(inv.discountPercent || 0);
+    setEditGstPercent(inv.gstPercent !== undefined ? inv.gstPercent : 18);
+    setEditBillingAuthority(inv.billingAuthority || '');
+    setEditIncludeSignature(inv.includeSignature !== false);
+    setEditReferredBy(inv.referredBy || '');
+    setEditAmountPaid(inv.amountPaid || 0);
+    setEditStatus(inv.status || 'Pending');
+    setEditItemsList(
+      inv.items && inv.items.length > 0
+        ? inv.items.map((it, idx) => ({
+            id: it.id || `edit-item-${idx}-${Date.now()}`,
+            description: it.description || '',
+            department: it.department || 'Ads',
+            qty: it.qty || 1,
+            unitPrice: it.unitPrice || 0,
+          }))
+        : [{ id: 'edit-item-1', description: 'Digital Marketing Services', department: 'Ads', qty: 1, unitPrice: 50000 }]
+    );
   };
 
   const handleSaveInvoiceEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingInvoice) return;
 
-    const pending = Math.max(0, editAmountTotal - editAmountPaid);
+    const rawSubtotal = editItemsList.reduce((sum, item) => sum + (item.qty * item.unitPrice), 0);
+    const discAmt = (rawSubtotal * (editDiscountPercent || 0)) / 100;
+    const afterDisc = Math.max(0, rawSubtotal - discAmt);
+    const gstAmt = (afterDisc * (editGstPercent || 0)) / 100;
+    const finalGrandTotal = Math.round(afterDisc + gstAmt);
+    const pending = Math.max(0, finalGrandTotal - editAmountPaid);
+
     let computedStatus: InvoiceStatus = editStatus;
-    if (pending === 0 && editAmountTotal > 0) {
+    if (pending === 0 && finalGrandTotal > 0) {
       computedStatus = 'Paid';
     } else if (editAmountPaid > 0 && pending > 0) {
       computedStatus = 'Partial';
@@ -146,14 +222,35 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
     const updated: Invoice = {
       ...editingInvoice,
-      clientName: editClientName,
-      projectName: editProjectName,
+      clientName: editClientName.trim(),
+      clientCompany: editClientCompany.trim(),
+      clientEmail: editClientEmail.trim(),
+      clientAddress: editClientAddress.trim(),
+      clientUrl: editClientUrl.trim(),
+      clientGstin: editClientGstin.trim(),
+      agencyBranch: editAgencyBranch,
+      projectName: editProjectName.trim(),
+      departmentCategory: editDepartmentCategory,
       issueDate: editIssueDate,
       dueDate: editDueDate,
-      amountTotal: editAmountTotal,
+      subtotalAmount: rawSubtotal,
+      discountPercent: editDiscountPercent,
+      discountAmount: discAmt,
+      gstPercent: editGstPercent,
+      gstAmount: gstAmt,
+      amountTotal: finalGrandTotal,
       amountPaid: editAmountPaid,
       amountPending: pending,
       status: computedStatus,
+      items: editItemsList.map((item) => ({
+        ...item,
+        total: item.qty * item.unitPrice,
+      })),
+      referredBy: editReferredBy.trim(),
+      billingAuthority: editBillingAuthority.trim(),
+      includeSignature: editIncludeSignature,
+      signatoryName: editBillingAuthority ? editBillingAuthority.split('—')[0]?.trim() : 'Rajesh Malhotra',
+      signatoryTitle: editBillingAuthority ? (editBillingAuthority.split('—')[1]?.trim() || 'Billing Lead') : 'Director of Billing',
     };
 
     if (onUpdateInvoice) {
@@ -180,9 +277,45 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
     setPaymentModalInvoice(null);
   };
 
+  const handleCreateService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!srvName) return;
+    const newSrv: AgencyService = {
+      id: `srv-${Date.now()}`,
+      name: srvName,
+      department: srvDept,
+      defaultPrice: Number(srvPrice) || 0,
+      description: srvDesc,
+      createdDate: new Date().toISOString().split('T')[0],
+    };
+    if (onAddService) {
+      onAddService(newSrv);
+    }
+    setSrvName('');
+    setSrvDesc('');
+    setShowServiceModal(false);
+  };
+
   const handleCreateInvoice = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientName || !newProjectName) return;
+
+    // Resolve Referred By Value
+    let finalReferredBy = '';
+    if (referredByType === 'EMPLOYEE' && selectedRefEmp) {
+      finalReferredBy = selectedRefEmp;
+    } else if (referredByType === 'CLIENT' && selectedRefClient) {
+      finalReferredBy = selectedRefClient;
+    } else {
+      finalReferredBy = customRefText;
+    }
+
+    // Resolve Billed / Signatory Authority
+    let finalBilledAuth = newBillingAuthority;
+    const matchedEmp = employees.find((emp) => emp.id === selectedBilledEmpId);
+    if (matchedEmp) {
+      finalBilledAuth = `${matchedEmp.name} — ${matchedEmp.role || 'Billing Lead'}`;
+    }
 
     const formattedItems = itemsList.map((item, idx) => ({
       id: `item-${idx + 1}`,
@@ -203,31 +336,32 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
     const newInv: Invoice = {
       id: `inv-${Date.now()}`,
       invoiceNumber: invoiceNum,
-      clientName: newClientName,
-      clientEmail: newClientEmail || `${newClientName.toLowerCase().replace(/\s+/g, '')}@client.com`,
-      clientCompany: newClientCompany || newClientName,
-      clientAddress: newClientAddress,
-      clientUrl: newClientUrl,
-      clientGstin: newClientGstin,
-      projectName: newProjectName,
+      clientName: newClientName.trim(),
+      clientEmail: newClientEmail ? newClientEmail.trim() : '',
+      clientCompany: newClientCompany ? newClientCompany.trim() : '',
+      clientAddress: newClientAddress ? newClientAddress.trim() : '',
+      clientUrl: newClientUrl ? newClientUrl.trim() : '',
+      clientGstin: newClientGstin ? newClientGstin.trim() : '',
+      projectName: newProjectName.trim(),
       departmentCategory: newDepartmentCategory,
-      issueDate: '2026-07-31',
-      dueDate: newDueDate,
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: newDueDate || getFutureDateFormatted(15),
       subtotalAmount: rawSubtotal,
-      discountPercent: Number(newDiscountPercent),
+      discountPercent: Number(newDiscountPercent) || 0,
       discountAmount: discAmt,
-      gstPercent: Number(newGstPercent),
+      gstPercent: Number(newGstPercent) || 0,
       gstAmount: gstAmt,
       amountTotal: finalGrandTotal,
       amountPaid: 0,
       amountPending: finalGrandTotal,
       status: 'Pending',
       items: formattedItems,
-      referredBy: newReferredBy,
-      billingAuthority: newBillingAuthority,
+      referredBy: finalReferredBy ? finalReferredBy.trim() : '',
+      billingAuthority: finalBilledAuth ? finalBilledAuth.trim() : '',
+      agencyBranch: newAgencyBranch,
       includeSignature: newIncludeSignature,
-      signatoryName: newBillingAuthority.split('—')[0]?.trim() || 'Rajesh Malhotra',
-      signatoryTitle: newBillingAuthority.split('—')[1]?.trim() || 'Director of Billing Authority',
+      signatoryName: finalBilledAuth ? finalBilledAuth.split('—')[0]?.trim() : 'Rajesh Malhotra',
+      signatoryTitle: finalBilledAuth ? (finalBilledAuth.split('—')[1]?.trim() || 'Billing Lead') : 'Director of Billing',
       paymentHistory: [],
     };
 
@@ -241,8 +375,10 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
     setNewClientUrl('');
     setNewClientGstin('');
     setNewProjectName('');
-    setNewReferredBy('');
-    setItemsList([{ id: 'item-1', description: 'Digital Ads & Media Campaign Optimization', department: 'Ads', qty: 1, unitPrice: 50000 }]);
+    setSelectedRefEmp('');
+    setSelectedRefClient('');
+    setCustomRefText('');
+    setItemsList([{ id: 'item-1', description: 'Google & Meta Ads Campaign Optimization', department: 'Ads', qty: 1, unitPrice: 50000 }]);
   };
 
   return (
@@ -414,6 +550,15 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
             >
               <Plus size={16} />
               + Generate New Invoice
+            </button>
+
+            {/* Manage Services Catalog Button */}
+            <button
+              onClick={() => setShowServiceModal(true)}
+              className="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+            >
+              <Settings size={15} />
+              Manage Services ({services.length})
             </button>
           </div>
         </div>
@@ -622,13 +767,9 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                                   </button>
                                   {onDeleteInvoice && (
                                     <button
-                                      onClick={() => {
-                                        if (window.confirm(`Founder Override: Delete invoice ${inv.invoiceNumber}?`)) {
-                                          onDeleteInvoice(inv.id);
-                                        }
-                                      }}
+                                      onClick={() => setInvoiceToDelete(inv)}
                                       className="bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 border border-rose-800"
-                                      title="Founder Override: Delete Invoice"
+                                      title="Delete Invoice"
                                     >
                                       <Trash2 size={13} />
                                     </button>
@@ -889,7 +1030,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Office / Billing Address Offers
+                      Office / Billing Address
                     </label>
                     <input
                       type="text"
@@ -913,13 +1054,31 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     />
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                    🏢 TopRank Agency Branch Address (Printed on Invoice Header) <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={newAgencyBranch}
+                    onChange={(e) => setNewAgencyBranch(e.target.value as 'Chandigarh' | 'Lucknow')}
+                    className="w-full bg-slate-900 border border-amber-500/50 text-xs text-amber-200 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="Chandigarh">
+                      📍 Chandigarh Branch: Shop No. 8, Sector 34B, Sector 34, Chandigarh, 160022
+                    </option>
+                    <option value="Lucknow">
+                      📍 Lucknow Branch: Sulabh Awas, A47/32, Apartments, Sector 01, Gomti Nagar, Lucknow, UP 226010
+                    </option>
+                  </select>
+                </div>
               </div>
 
-              {/* Section 2: Department, Project Scope & Referral */}
+              {/* Section 2: Department, Project Scope, Billed Employee & Referral Dropdown */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Building size={14} />
-                  Project Scope & Department Category
+                  Project Scope, Staff Biller & Referral Source
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -939,7 +1098,27 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Primary Department / Service Type <span className="text-rose-400">*</span>
+                      Assigned Employee / Billing Lead <span className="text-rose-400">*</span>
+                    </label>
+                    <select
+                      value={selectedBilledEmpId}
+                      onChange={(e) => setSelectedBilledEmpId(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-semibold"
+                    >
+                      <option value="">-- Choose Staff Biller --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          👤 {emp.name} ({emp.role || emp.department})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Primary Department Category <span className="text-rose-400">*</span>
                     </label>
                     <select
                       value={newDepartmentCategory}
@@ -953,21 +1132,6 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       <option value="Video Editing">Video Editing & Content</option>
                       <option value="Design & Creative">Design & Creative UI/UX</option>
                     </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Referred By (Partner / Channel)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Siddharth Verma (Partner)"
-                      value={newReferredBy}
-                      onChange={(e) => setNewReferredBy(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
-                    />
                   </div>
 
                   <div>
@@ -983,100 +1147,237 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     />
                   </div>
                 </div>
+
+                {/* Referred By Dropdown Section */}
+                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                      <span>Referred By (Partner / Employee / Client)</span>
+                    </label>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setReferredByType('EMPLOYEE')}
+                        className={`px-2 py-0.5 rounded font-bold transition-all ${
+                          referredByType === 'EMPLOYEE' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        Employee
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReferredByType('CLIENT')}
+                        className={`px-2 py-0.5 rounded font-bold transition-all ${
+                          referredByType === 'CLIENT' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        Client
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReferredByType('CUSTOM')}
+                        className={`px-2 py-0.5 rounded font-bold transition-all ${
+                          referredByType === 'CUSTOM' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                        }`}
+                      >
+                        Custom Text
+                      </button>
+                    </div>
+                  </div>
+
+                  {referredByType === 'EMPLOYEE' && (
+                    <select
+                      value={selectedRefEmp}
+                      onChange={(e) => setSelectedRefEmp(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">-- Choose Referring Employee --</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={`${emp.name} (${emp.role})`}>
+                          👤 {emp.name} — {emp.role || emp.department}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {referredByType === 'CLIENT' && (
+                    <select
+                      value={selectedRefClient}
+                      onChange={(e) => setSelectedRefClient(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="">-- Choose Referring Client --</option>
+                      {uniqueClients.map((client, idx) => (
+                        <option key={idx} value={`${client} (Client Referral)`}>
+                          🏢 {client}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  {referredByType === 'CUSTOM' && (
+                    <input
+                      type="text"
+                      placeholder="Type referral source name (e.g. Siddharth Verma - External Partner)"
+                      value={customRefText}
+                      onChange={(e) => setCustomRefText(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  )}
+                </div>
               </div>
 
-              {/* Section 3: Dynamic Service Line Items & Customized Rates */}
+              {/* Section 3: Dynamic Service Dropdown & Customized Rates */}
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText size={14} />
-                    Services & Customized Rate Selection
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => setItemsList([...itemsList, { id: `item-${Date.now()}`, description: '', department: newDepartmentCategory, qty: 1, unitPrice: 25000 }])}
-                    className="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 hover:bg-emerald-900 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1"
-                  >
-                    <Plus size={12} /> Add Service Line
-                  </button>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText size={14} />
+                      Services Dropdown & Custom Pricing
+                    </h4>
+                    <p className="text-[10px] text-slate-400">Pick pre-configured services from catalog or type custom pricing</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowServiceModal(true)}
+                      className="text-[10px] bg-purple-950 text-purple-300 border border-purple-800/80 hover:bg-purple-900 px-2 py-1 rounded-lg font-bold flex items-center gap-1"
+                    >
+                      <Plus size={11} /> + Create Service
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setItemsList([...itemsList, { id: `item-${Date.now()}`, description: '', department: newDepartmentCategory, qty: 1, unitPrice: 25000 }])}
+                      className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 hover:bg-emerald-900 px-2 py-1 rounded-lg font-bold flex items-center gap-1"
+                    >
+                      <Plus size={11} /> + Add Line Item
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {itemsList.map((item, idx) => (
-                    <div key={item.id || idx} className="grid grid-cols-12 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800 items-center">
-                      <div className="col-span-4">
-                        <input
-                          type="text"
-                          required
-                          placeholder="Service description (e.g. App Development Sprint)"
-                          value={item.description}
-                          onChange={(e) => {
-                            const updated = [...itemsList];
-                            updated[idx].description = e.target.value;
-                            setItemsList(updated);
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2.5 py-1.5"
-                        />
-                      </div>
-
-                      <div className="col-span-3">
-                        <select
-                          value={item.department}
-                          onChange={(e) => {
-                            const updated = [...itemsList];
-                            updated[idx].department = e.target.value;
-                            setItemsList(updated);
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-lg px-2 py-1.5"
-                        >
-                          <option value="Ads">Ads</option>
-                          <option value="Website">Website</option>
-                          <option value="App">App</option>
-                          <option value="Social Media">Social Media</option>
-                          <option value="Video Editing">Video Editing</option>
-                        </select>
-                      </div>
-
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min={1}
-                          placeholder="Qty"
-                          value={item.qty}
-                          onChange={(e) => {
-                            const updated = [...itemsList];
-                            updated[idx].qty = Number(e.target.value);
-                            setItemsList(updated);
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-center text-white rounded-lg px-2 py-1.5"
-                        />
-                      </div>
-
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="Rate (₹)"
-                          value={item.unitPrice}
-                          onChange={(e) => {
-                            const updated = [...itemsList];
-                            updated[idx].unitPrice = Number(e.target.value);
-                            setItemsList(updated);
-                          }}
-                          className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 font-bold rounded-lg px-2 py-1.5"
-                        />
-                      </div>
-
-                      <div className="col-span-1 text-center">
-                        {itemsList.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setItemsList(itemsList.filter((_, i) => i !== idx))}
-                            className="text-rose-400 hover:text-rose-300 font-bold text-xs"
+                    <div key={item.id || idx} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        {/* Service Dropdown Selection */}
+                        <div className="col-span-12 md:col-span-6">
+                          <label className="block text-[10px] font-bold text-slate-400 mb-0.5">
+                            Select Service from Catalog:
+                          </label>
+                          <select
+                            value={item.serviceId || ''}
+                            onChange={(e) => {
+                              const selectedSrvId = e.target.value;
+                              const srv = services.find((s) => s.id === selectedSrvId);
+                              const updated = [...itemsList];
+                              if (srv) {
+                                updated[idx] = {
+                                  ...updated[idx],
+                                  serviceId: srv.id,
+                                  description: srv.name,
+                                  department: srv.department || 'Ads',
+                                  unitPrice: srv.defaultPrice || 0,
+                                };
+                              } else {
+                                updated[idx] = { ...updated[idx], serviceId: '' };
+                              }
+                              setItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold"
                           >
-                            ✕
-                          </button>
-                        )}
+                            <option value="">-- Choose Agency Service Dropdown --</option>
+                            {services.map((srv) => (
+                              <option key={srv.id} value={srv.id}>
+                                {srv.name} ({srv.department}) — ₹{srv.defaultPrice?.toLocaleString('en-IN')}
+                              </option>
+                            ))}
+                            <option value="CUSTOM">✍️ Custom Line Item Title</option>
+                          </select>
+                        </div>
+
+                        <div className="col-span-12 md:col-span-6">
+                          <label className="block text-[10px] font-bold text-slate-400 mb-0.5">
+                            Line Item Description / Title:
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Description"
+                            value={item.description}
+                            onChange={(e) => {
+                              const updated = [...itemsList];
+                              updated[idx].description = e.target.value;
+                              setItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-4">
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Category</label>
+                          <select
+                            value={item.department}
+                            onChange={(e) => {
+                              const updated = [...itemsList];
+                              updated[idx].department = e.target.value;
+                              setItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-lg px-2 py-1.5"
+                          >
+                            <option value="Ads">Ads</option>
+                            <option value="Website">Website</option>
+                            <option value="App">App</option>
+                            <option value="Social Media">Social Media</option>
+                            <option value="Video Editing">Video Editing</option>
+                            <option value="Design & Creative">Design & Creative</option>
+                          </select>
+                        </div>
+
+                        <div className="col-span-3">
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Quantity</label>
+                          <input
+                            type="number"
+                            min={1}
+                            placeholder="Qty"
+                            value={item.qty}
+                            onChange={(e) => {
+                              const updated = [...itemsList];
+                              updated[idx].qty = Number(e.target.value);
+                              setItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-center text-white rounded-lg px-2 py-1.5"
+                          />
+                        </div>
+
+                        <div className="col-span-4">
+                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Custom Price Rate (₹)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="Rate (₹)"
+                            value={item.unitPrice}
+                            onChange={(e) => {
+                              const updated = [...itemsList];
+                              updated[idx].unitPrice = Number(e.target.value);
+                              setItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 font-bold rounded-lg px-2 py-1.5"
+                          />
+                        </div>
+
+                        <div className="col-span-1 text-center pt-3">
+                          {itemsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setItemsList(itemsList.filter((_, i) => i !== idx))}
+                              className="text-rose-400 hover:text-rose-300 font-bold text-xs"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1087,7 +1388,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
                 <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck size={14} />
-                  Discount, GST & Billing Authority Approval
+                  Discount, GST & Signatory Stamp Approval
                 </h4>
 
                 <div className="grid grid-cols-3 gap-3">
@@ -1121,18 +1422,15 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Billing Authority (Name Tag)
+                      Signatory Tag Header
                     </label>
-                    <select
+                    <input
+                      type="text"
                       value={newBillingAuthority}
                       onChange={(e) => setNewBillingAuthority(e.target.value)}
+                      placeholder="e.g. Rajesh Malhotra — Director of Billing"
                       className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
-                    >
-                      <option value="Rajesh Malhotra — Director of Billing">Rajesh Malhotra — Director of Billing</option>
-                      <option value="Ananya Sharma — Co-Founder & CFO">Ananya Sharma — Co-Founder & CFO</option>
-                      <option value="Rohan Gupta — Chief Executive Officer">Rohan Gupta — Chief Executive Officer</option>
-                      <option value="Priya Nair — Lead Finance Controller">Priya Nair — Lead Finance Controller</option>
-                    </select>
+                    />
                   </div>
                 </div>
 
@@ -1171,15 +1469,20 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
         </div>
       )}
 
-      {/* Edit Billed Invoice Modal (Founder Only) */}
-      {editingInvoice && isFounder && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95">
+      {/* Edit Billed Invoice Modal (Full Editing Capabilities) */}
+      {editingInvoice && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-3xl w-full p-6 text-white shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
-                <Edit2 size={18} />
-                Founder Override: Edit Billed Invoice Data
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
+                  <Edit2 size={18} />
+                  Edit Invoice #{editingInvoice.invoiceNumber}
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Update any field: client info, branch address, deliverables, taxes, referral, signature stamp & status.
+                </p>
+              </div>
               <button
                 onClick={() => setEditingInvoice(null)}
                 className="text-slate-400 hover:text-white font-bold text-lg"
@@ -1188,100 +1491,436 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveInvoiceEdit} className="space-y-3">
-              <div className="bg-amber-950/40 p-3 rounded-xl border border-amber-500/40 text-xs text-amber-200">
-                Editing Invoice: <strong className="font-mono text-white text-sm ml-1">{editingInvoice.invoiceNumber}</strong>
-                <p className="text-[11px] text-amber-300/80 mt-1">
-                  Founder Privilege: You can adjust billed amounts, issue dates, due dates, or status even after initial billing.
-                </p>
+            <form onSubmit={handleSaveInvoiceEdit} className="space-y-4">
+              {/* Section 1: Client & Agency Branch Information */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <User size={14} />
+                  1. Client & Agency Branch Info
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Client Full Name <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editClientName}
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Company Name / Brand
+                    </label>
+                    <input
+                      type="text"
+                      value={editClientCompany}
+                      onChange={(e) => setEditClientCompany(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Client Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={editClientEmail}
+                      onChange={(e) => setEditClientEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Client GSTIN Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editClientGstin}
+                      onChange={(e) => setEditClientGstin(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Client Office Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editClientAddress}
+                      onChange={(e) => setEditClientAddress(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Client Website URL
+                    </label>
+                    <input
+                      type="text"
+                      value={editClientUrl}
+                      onChange={(e) => setEditClientUrl(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-amber-300 mb-1">
+                    🏢 TopRank Agency Branch Address (Printed on Invoice) <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={editAgencyBranch}
+                    onChange={(e) => setEditAgencyBranch(e.target.value as 'Chandigarh' | 'Lucknow')}
+                    className="w-full bg-slate-900 border border-amber-500/50 text-xs text-amber-200 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="Chandigarh">
+                      📍 Chandigarh Branch: Shop No. 8, Sector 34B, Sector 34, Chandigarh, 160022
+                    </option>
+                    <option value="Lucknow">
+                      📍 Lucknow Branch: Sulabh Awas, A47/32, Apartments, Sector 01, Gomti Nagar, Lucknow, UP 226010
+                    </option>
+                  </select>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Section 2: Department, Project Scope, Dates & Referral */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText size={14} />
+                  2. Campaign Scope & Dates
+                </h4>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Project Scope Title <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editProjectName}
+                      onChange={(e) => setEditProjectName(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Department Category
+                    </label>
+                    <select
+                      value={editDepartmentCategory}
+                      onChange={(e) => setEditDepartmentCategory(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="Ads">Ads (Google & Meta PPC)</option>
+                      <option value="Website">Website & SEO</option>
+                      <option value="App">Mobile App Development</option>
+                      <option value="Social Media">Social Media Management</option>
+                      <option value="Video Editing">Video Editing & Reels</option>
+                      <option value="Design & Creative">Design & UI/UX</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Issue Date <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={editIssueDate}
+                      onChange={(e) => setEditIssueDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Payment Due Date <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Referred By Partner
+                    </label>
+                    <input
+                      type="text"
+                      value={editReferredBy}
+                      onChange={(e) => setEditReferredBy(e.target.value)}
+                      placeholder="e.g. Employee or Client Referral"
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Deliverables & Items Breakdown */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sparkles size={14} />
+                    3. Billed Deliverables & Line Items ({editItemsList.length})
+                  </h4>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditItemsList([
+                        ...editItemsList,
+                        {
+                          id: `edit-item-${Date.now()}`,
+                          description: 'Custom Service Scope',
+                          department: 'Ads',
+                          qty: 1,
+                          unitPrice: 10000,
+                        },
+                      ])
+                    }
+                    className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1"
+                  >
+                    <Plus size={12} /> Add Line Item
+                  </button>
+                </div>
+
+                {/* Preset Catalog Insert Option */}
+                {services.length > 0 && (
+                  <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center gap-2 text-xs">
+                    <span className="text-slate-400 font-semibold shrink-0">➕ Quick Insert Catalog Service:</span>
+                    <select
+                      onChange={(e) => {
+                        const srv = services.find((s) => s.id === e.target.value);
+                        if (srv) {
+                          setEditItemsList([
+                            ...editItemsList,
+                            {
+                              id: `edit-item-${Date.now()}`,
+                              serviceId: srv.id,
+                              description: srv.name,
+                              department: srv.department,
+                              qty: 1,
+                              unitPrice: srv.defaultPrice || 50000,
+                            },
+                          ]);
+                        }
+                        e.target.value = '';
+                      }}
+                      defaultValue=""
+                      className="bg-slate-950 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2 py-1 text-xs focus:outline-none"
+                    >
+                      <option value="" disabled>-- Select Preset Agency Service --</option>
+                      {services.map((srv) => (
+                        <option key={srv.id} value={srv.id}>
+                          {srv.name} ({srv.department}) - ₹{srv.defaultPrice?.toLocaleString('en-IN')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {editItemsList.map((item, idx) => (
+                    <div key={item.id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-5">
+                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Description</label>
+                          <input
+                            type="text"
+                            required
+                            value={item.description}
+                            onChange={(e) => {
+                              const updated = [...editItemsList];
+                              updated[idx].description = e.target.value;
+                              setEditItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2 py-1.5"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Department</label>
+                          <select
+                            value={item.department}
+                            onChange={(e) => {
+                              const updated = [...editItemsList];
+                              updated[idx].department = e.target.value;
+                              setEditItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-[11px] text-white rounded-lg px-2 py-1.5"
+                          >
+                            <option value="Ads">Ads</option>
+                            <option value="Website">Website</option>
+                            <option value="App">App</option>
+                            <option value="Social Media">Social</option>
+                            <option value="Video Editing">Video</option>
+                            <option value="Design & Creative">Design</option>
+                          </select>
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Qty</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={item.qty}
+                            onChange={(e) => {
+                              const updated = [...editItemsList];
+                              updated[idx].qty = Number(e.target.value);
+                              setEditItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2 py-1.5"
+                          />
+                        </div>
+
+                        <div className="col-span-2">
+                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Rate (₹)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.unitPrice}
+                            onChange={(e) => {
+                              const updated = [...editItemsList];
+                              updated[idx].unitPrice = Number(e.target.value);
+                              setEditItemsList(updated);
+                            }}
+                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 font-bold rounded-lg px-2 py-1.5"
+                          />
+                        </div>
+
+                        <div className="col-span-1 text-center pt-3">
+                          {editItemsList.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setEditItemsList(editItemsList.filter((_, i) => i !== idx))}
+                              className="text-rose-400 hover:text-rose-300 font-bold text-xs"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 4: Discount, GST, Signature, Paid Amount & Status */}
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck size={14} />
+                  4. Discount, GST, Stamp & Payment Overrides
+                </h4>
+
+                <div className="grid grid-cols-4 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Discount (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={editDiscountPercent}
+                      onChange={(e) => setEditDiscountPercent(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      GST Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={28}
+                      value={editGstPercent}
+                      onChange={(e) => setEditGstPercent(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-blue-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Amount Paid (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={editAmountPaid}
+                      onChange={(e) => setEditAmountPaid(Number(e.target.value))}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      Invoice Status
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as InvoiceStatus)}
+                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-semibold"
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Paid">Paid</option>
+                      <option value="Overdue">Overdue</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Client Name</label>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Signatory Header Tag
+                  </label>
                   <input
                     type="text"
-                    required
-                    value={editClientName}
-                    onChange={(e) => setEditClientName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    value={editBillingAuthority}
+                    onChange={(e) => setEditBillingAuthority(e.target.value)}
+                    placeholder="e.g. Rajesh Malhotra — Director of Billing"
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Project Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={editProjectName}
-                    onChange={(e) => setEditProjectName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
-                  />
+
+                <div className="pt-2 flex items-center justify-between border-t border-slate-900 text-xs">
+                  <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editIncludeSignature}
+                      onChange={(e) => setEditIncludeSignature(e.target.checked)}
+                      className="rounded accent-blue-600 w-4 h-4"
+                    />
+                    <span>Attach Official Authorized Digital Signature & Stamp on Invoice</span>
+                  </label>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Issue Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={editIssueDate}
-                    onChange={(e) => setEditIssueDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Due Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={editDueDate}
-                    onChange={(e) => setEditDueDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Total Billed Amount (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={editAmountTotal}
-                    onChange={(e) => setEditAmountTotal(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-amber-400 rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-400 mb-1">Paid Amount (₹)</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    max={editAmountTotal}
-                    value={editAmountPaid}
-                    onChange={(e) => setEditAmountPaid(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 rounded-xl px-3 py-2 font-bold focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-400 mb-1">Payment Status</label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as InvoiceStatus)}
-                  className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Partial">Partial</option>
-                  <option value="Paid">Paid</option>
-                  <option value="Overdue">Overdue</option>
-                </select>
-              </div>
-
+              {/* Form Action Buttons */}
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
                 <button
                   type="button"
@@ -1292,12 +1931,214 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="bg-amber-600 hover:bg-amber-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg"
+                  className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
                 >
+                  <CheckCircle size={14} />
                   Save Billed Invoice Edits
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Invoice Confirmation Modal */}
+      {invoiceToDelete && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-500/50 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+                <Trash2 size={18} />
+                Delete Invoice Confirmation
+              </h3>
+              <button
+                onClick={() => setInvoiceToDelete(null)}
+                className="text-slate-400 hover:text-white font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-300">
+                Are you sure you want to permanently delete this invoice? This action will remove the record from billing and financials.
+              </p>
+
+              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+                <p className="font-mono font-bold text-white text-sm">
+                  Invoice #: <span className="text-blue-400">{invoiceToDelete.invoiceNumber}</span>
+                </p>
+                <p className="text-slate-300 font-medium">Client: {invoiceToDelete.clientName}</p>
+                <p className="text-slate-300 font-medium">Project: {invoiceToDelete.projectName}</p>
+                <p className="text-emerald-400 font-mono font-bold pt-1">
+                  Total Billed: {formatCurrency(invoiceToDelete.amountTotal)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 mt-5">
+              <button
+                type="button"
+                onClick={() => setInvoiceToDelete(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onDeleteInvoice && invoiceToDelete) {
+                    onDeleteInvoice(invoiceToDelete.id);
+                  }
+                  setInvoiceToDelete(null);
+                }}
+                className="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                Yes, Delete Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Manage & Create Services Catalog Modal */}
+      {showServiceModal && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-purple-500/40 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-purple-300 flex items-center gap-2">
+                  <Settings size={18} className="text-purple-400" />
+                  Admin Agency Services Catalog & Pricing
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  Create agency services stored in Supabase. These automatically populate the invoice generator dropdown.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowServiceModal(false)}
+                className="text-slate-400 hover:text-white font-bold text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Create Service Form */}
+            <form onSubmit={handleCreateService} className="bg-slate-950 p-4 rounded-xl border border-purple-900/40 space-y-3 mb-5">
+              <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={14} className="text-purple-400" />
+                + Create New Agency Service (Stores to Supabase)
+              </h4>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Service Name / Title <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. AI Chatbot Integration Sprint"
+                    value={srvName}
+                    onChange={(e) => setSrvName(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Department Category <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={srvDept}
+                    onChange={(e) => setSrvDept(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="Ads">Ads (Google & Meta PPC)</option>
+                    <option value="Website">Website & SEO</option>
+                    <option value="App">Mobile App Development</option>
+                    <option value="Social Media">Social Media Management</option>
+                    <option value="Video Editing">Video Editing & Reels</option>
+                    <option value="Design & Creative">Design & UI/UX</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Default Rate Price (₹) <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min={0}
+                    placeholder="e.g. 75000"
+                    value={srvPrice}
+                    onChange={(e) => setSrvPrice(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Service Description
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Brief scope summary"
+                    value={srvDesc}
+                    onChange={(e) => setSrvDesc(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  className="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  Save Service to Supabase
+                </button>
+              </div>
+            </form>
+
+            {/* List of Existing Services */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <BookOpen size={14} className="text-blue-400" />
+                Active Services Catalog ({services.length})
+              </h4>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {services.map((srv) => (
+                  <div
+                    key={srv.id}
+                    className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-white">{srv.name}</span>
+                        <span className="bg-purple-950 text-purple-300 text-[10px] px-2 py-0.5 rounded font-semibold border border-purple-800/60">
+                          {srv.department}
+                        </span>
+                      </div>
+                      {srv.description && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">{srv.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-emerald-400 font-mono font-bold text-xs">
+                        ₹{srv.defaultPrice?.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

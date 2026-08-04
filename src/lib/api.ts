@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { 
-  Employee, Project, Task, Invoice, AttendanceRecord, Meeting, TeamDiscussion, LedgerEntry 
+  Employee, Project, Task, Invoice, AttendanceRecord, Meeting, TeamDiscussion, LedgerEntry, AgencyService 
 } from '../types';
 import {
   INITIAL_EMPLOYEES,
@@ -11,6 +11,7 @@ import {
   INITIAL_MEETINGS,
   INITIAL_DISCUSSIONS,
   INITIAL_LEDGER,
+  INITIAL_SERVICES,
 } from '../data/mockData';
 
 export const MASTER_ADMIN_EMAILS = [
@@ -195,15 +196,58 @@ export const fetchAllData = async () => {
     console.warn('Task local storage read error:', e);
   }
 
+  // Read local invoice store cache to ensure client persistence across reloads
+  let invoiceList: Invoice[] = invoices || [];
+  try {
+    const rawLocalInvoices = localStorage.getItem('toprank_invoices_store');
+    if (rawLocalInvoices) {
+      const localInvoices: Invoice[] = JSON.parse(rawLocalInvoices);
+      const localInvMap = new Map(localInvoices.map((i) => [i.id, i]));
+
+      // Merge/override remote invoices with local cache
+      invoiceList = invoiceList.map((i) => localInvMap.get(i.id) || i);
+
+      // Append any newly created local invoices not yet in remote list
+      const existingInvIds = new Set(invoiceList.map((i) => i.id));
+      for (const li of localInvoices) {
+        if (!existingInvIds.has(li.id)) {
+          invoiceList.unshift(li);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Invoice local storage read error:', e);
+  }
+
+  // Read local ledger store cache
+  let ledgerList: LedgerEntry[] = ledger || [];
+  try {
+    const rawLocalLedger = localStorage.getItem('toprank_ledger_store');
+    if (rawLocalLedger) {
+      const localLedger: LedgerEntry[] = JSON.parse(rawLocalLedger);
+      const localLedgerMap = new Map(localLedger.map((l) => [l.id, l]));
+
+      ledgerList = ledgerList.map((l) => localLedgerMap.get(l.id) || l);
+      const existingLedgerIds = new Set(ledgerList.map((l) => l.id));
+      for (const ll of localLedger) {
+        if (!existingLedgerIds.has(ll.id)) {
+          ledgerList.unshift(ll);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Ledger local storage read error:', e);
+  }
+
   return {
     employees: employeeList,
     projects: projects || [],
     tasks: taskList,
-    invoices: invoices || [],
+    invoices: invoiceList,
     attendance: attendance || [],
     meetings: meetings || [],
     discussions: discussions || [],
-    ledger: ledger || []
+    ledger: ledgerList
   };
 };
 
@@ -487,15 +531,62 @@ export const saveTask = async (task: Task) => {
 };
 
 export const saveInvoice = async (invoice: Invoice) => {
-  await supabase.from('invoices').upsert(invoice);
+  // 1. Sync to local storage store for instant persistence across reloads
+  try {
+    const rawLocal = localStorage.getItem('toprank_invoices_store');
+    const list: Invoice[] = rawLocal ? JSON.parse(rawLocal) : [];
+    const updated = [invoice, ...list.filter((inv) => inv.id !== invoice.id)];
+    localStorage.setItem('toprank_invoices_store', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Local invoice cache save error:', e);
+  }
+
+  // 2. Sync to Supabase database table
+  try {
+    await supabase.from('invoices').upsert(invoice);
+  } catch (err) {
+    console.warn('Supabase saveInvoice notice:', err);
+  }
 };
 
 export const deleteInvoice = async (id: string) => {
-  await supabase.from('invoices').delete().eq('id', id);
+  // 1. Remove from local storage store
+  try {
+    const rawLocal = localStorage.getItem('toprank_invoices_store');
+    if (rawLocal) {
+      const list: Invoice[] = JSON.parse(rawLocal);
+      const filtered = list.filter((inv) => inv.id !== id);
+      localStorage.setItem('toprank_invoices_store', JSON.stringify(filtered));
+    }
+  } catch (e) {
+    console.warn('Local invoice delete cache error:', e);
+  }
+
+  // 2. Remove from Supabase
+  try {
+    await supabase.from('invoices').delete().eq('id', id);
+  } catch (err) {
+    console.warn('Supabase deleteInvoice notice:', err);
+  }
 };
 
 export const saveLedgerEntry = async (entry: LedgerEntry) => {
-  await supabase.from('ledger').upsert(entry);
+  // 1. Sync to local storage store
+  try {
+    const rawLocal = localStorage.getItem('toprank_ledger_store');
+    const list: LedgerEntry[] = rawLocal ? JSON.parse(rawLocal) : [];
+    const updated = [entry, ...list.filter((l) => l.id !== entry.id)];
+    localStorage.setItem('toprank_ledger_store', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('Local ledger cache save error:', e);
+  }
+
+  // 2. Sync to Supabase
+  try {
+    await supabase.from('ledger').upsert(entry);
+  } catch (err) {
+    console.warn('Supabase saveLedgerEntry notice:', err);
+  }
 };
 
 export const saveDiscussion = async (discussion: TeamDiscussion) => {
@@ -504,4 +595,70 @@ export const saveDiscussion = async (discussion: TeamDiscussion) => {
 
 export const saveMeeting = async (meeting: Meeting) => {
   await supabase.from('meetings').upsert(meeting);
+};
+
+export const fetchServicesFromSupabase = async (): Promise<AgencyService[]> => {
+  try {
+    const { data, error } = await supabase.from('services').select('*').order('createdDate', { ascending: false });
+    if (!error && data && data.length > 0) {
+      return data.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+        department: s.department || 'Ads',
+        defaultPrice: Number(s.default_price ?? s.defaultPrice ?? 0),
+        description: s.description || '',
+        createdDate: s.created_date || s.createdDate || new Date().toISOString().split('T')[0],
+      }));
+    }
+  } catch (err) {
+    console.warn('Supabase services fetch error (falling back to local cache):', err);
+  }
+
+  // Fallback to localStorage + INITIAL_SERVICES
+  try {
+    const local = localStorage.getItem('toprank_agency_services');
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('LocalStorage services read error:', e);
+  }
+
+  return INITIAL_SERVICES;
+};
+
+export const saveServiceToSupabase = async (service: AgencyService): Promise<AgencyService> => {
+  // Save to Supabase
+  try {
+    const payload = {
+      id: service.id,
+      name: service.name,
+      department: service.department || 'Ads',
+      default_price: service.defaultPrice || 0,
+      description: service.description || '',
+      created_date: service.createdDate || new Date().toISOString().split('T')[0],
+    };
+    await supabase.from('services').upsert(payload);
+  } catch (err) {
+    console.warn('Supabase service save error:', err);
+  }
+
+  // Sync to localStorage
+  try {
+    const current = await fetchServicesFromSupabase();
+    const existingIdx = current.findIndex((s) => s.id === service.id);
+    let updated: AgencyService[];
+    if (existingIdx >= 0) {
+      updated = [...current];
+      updated[existingIdx] = service;
+    } else {
+      updated = [service, ...current];
+    }
+    localStorage.setItem('toprank_agency_services', JSON.stringify(updated));
+  } catch (e) {
+    console.warn('LocalStorage service save error:', e);
+  }
+
+  return service;
 };

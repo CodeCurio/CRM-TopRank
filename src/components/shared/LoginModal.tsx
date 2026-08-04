@@ -216,8 +216,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       let authUser: any = null;
 
-      // 1. Attempt standard password login
-      let { data, error } = await supabase.auth.signInWithPassword({
+      // 1. Primary Authentication via Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: cleanEmail,
         password: cleanPassword,
       });
@@ -225,73 +225,51 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       if (!error && data?.user) {
         authUser = data.user;
       } else {
-        // Fallback: Synchronize or auto-provision user in Supabase Auth via Admin API
-        try {
-          const { data: usersData } = await supabase.auth.admin.listUsers();
-          const existingUser = usersData?.users?.find(
-            (u: any) => u.email?.toLowerCase() === cleanEmail
-          );
+        // 2. Check if employee exists in database with matching custom password
+        const foundEmp = employees.find((emp) => emp.email.toLowerCase() === cleanEmail);
 
-          if (!existingUser) {
-            // Create user in Auth
-            const { data: newUser } = await supabase.auth.admin.createUser({
-              email: cleanEmail,
-              password: cleanPassword,
-              email_confirm: true,
-            });
+        if (foundEmp && foundEmp.password && foundEmp.password === cleanPassword) {
+          try {
+            const { data: usersData } = await supabase.auth.admin.listUsers();
+            const existingUser = usersData?.users?.find(
+              (u: any) => u.email?.toLowerCase() === cleanEmail
+            );
 
-            if (newUser?.user) {
-              authUser = newUser.user;
-              await supabase.auth.signInWithPassword({
+            if (!existingUser) {
+              const { data: newUser } = await supabase.auth.admin.createUser({
                 email: cleanEmail,
                 password: cleanPassword,
+                email_confirm: true,
               });
+              if (newUser?.user) authUser = newUser.user;
+            } else {
+              await supabase.auth.admin.updateUserById(existingUser.id, {
+                password: cleanPassword,
+              });
+              authUser = existingUser;
             }
-          } else {
-            // Existing user in Auth - update password to match entered password and sign in
-            authUser = existingUser;
-            if (cleanPassword.length >= 6) {
-              try {
-                await supabase.auth.admin.updateUserById(existingUser.id, {
-                  password: cleanPassword,
-                });
-                await supabase.from('employees').update({ password: cleanPassword }).eq('id', existingUser.id);
-                const retry = await supabase.auth.signInWithPassword({
-                  email: cleanEmail,
-                  password: cleanPassword,
-                });
-                if (retry.data?.user) {
-                  authUser = retry.data.user;
-                }
-              } catch (updErr) {
-                console.warn('Password sync note:', updErr);
-              }
-            }
+          } catch {
+            authUser = { id: foundEmp.id, email: cleanEmail };
           }
-        } catch (adminErr) {
-          console.warn('Admin auth check note:', adminErr);
+        } else {
+          // Password is WRONG or user credentials do not match
+          setErrorMessage('Invalid password or corporate email address. Authentication failed.');
+          setLoading(false);
+          return;
         }
       }
 
-      // Fallback: If authUser still not resolved, resolve from employee list or create fallback ID
       if (!authUser) {
-        const foundEmp = employees.find((emp) => emp.email.toLowerCase() === cleanEmail);
-        authUser = {
-          id: foundEmp?.id || 'emp-' + Date.now(),
-          email: cleanEmail,
-        };
+        setErrorMessage('Invalid password or corporate email address. Authentication failed.');
+        setLoading(false);
+        return;
       }
 
-      // Complete profile sync and log in user on 1st click!
+      // Complete profile sync and log in user
       await handlePostLoginProfileSync(authUser, cleanEmail);
     } catch (err: any) {
       console.error('Login error:', err);
-      const foundEmp = employees.find((emp) => emp.email.toLowerCase() === cleanEmail);
-      const fallbackUser = {
-        id: foundEmp?.id || 'emp-' + Date.now(),
-        email: cleanEmail,
-      };
-      await handlePostLoginProfileSync(fallbackUser, cleanEmail);
+      setErrorMessage(err.message || 'Invalid password or corporate email address. Please try again.');
     } finally {
       setLoading(false);
     }

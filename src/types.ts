@@ -80,6 +80,15 @@ export interface Project {
   ongoingStatusNote: string;
 }
 
+export interface AgencyService {
+  id: string;
+  name: string;
+  department?: string;
+  defaultPrice?: number;
+  description?: string;
+  createdDate?: string;
+}
+
 export interface InvoiceItem {
   id: string;
   description: string;
@@ -114,6 +123,7 @@ export interface Invoice {
   subtotalAmount?: number; // Subtotal amount before tax & discount
   referredBy?: string; // Referred By person/partner
   billingAuthority?: string; // Billed/Approved Authority Name Tag
+  agencyBranch?: 'Chandigarh' | 'Lucknow' | string; // Selected agency office address
   includeSignature?: boolean; // Authorized Signature & Digital Stamp toggle
   signatoryName?: string; // Authorized Signatory Name
   signatoryTitle?: string; // Authorized Signatory Title
