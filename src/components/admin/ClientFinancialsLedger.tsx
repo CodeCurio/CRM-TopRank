@@ -481,21 +481,21 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
           onClick={() => setStatusFilter('BLINKING_ALERTS')}
           className={`cursor-pointer rounded-2xl p-5 text-white shadow-lg transition-all ${
             totalUrgentCount > 0
-              ? 'bg-rose-950/90 border border-rose-600 animate-blink-due hover:brightness-110'
+              ? 'bg-gradient-to-r from-rose-600 to-rose-700 border border-rose-500 text-white shadow-md animate-blink-due hover:brightness-105'
               : 'bg-slate-900 border border-slate-800'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-widest font-bold text-rose-300 flex items-center gap-1">
-              <AlertTriangle size={15} className="animate-bounce" />
+            <span className="text-[10px] uppercase tracking-widest font-bold text-rose-200 flex items-center gap-1">
+              <AlertTriangle size={15} className="animate-bounce text-amber-300" />
               Due Date Alert System
             </span>
-            <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping"></span>
+            <span className="w-3 h-3 rounded-full bg-rose-400 animate-ping"></span>
           </div>
-          <p className="text-2xl font-bold text-rose-300 mt-2">
+          <p className="text-2xl font-bold text-white mt-2">
             {totalUrgentCount} Urgent Action Required
           </p>
-          <div className="text-xs font-bold text-rose-200 mt-2 flex items-center justify-between">
+          <div className="text-xs font-bold text-rose-100 mt-2 flex items-center justify-between">
             <span>{overdueInvoices.length} Overdue Invoices</span>
             <span className="underline">Click to Filter &rarr;</span>
           </div>
@@ -539,7 +539,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                 placeholder="Search Client or Invoice #..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-900 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-900 rounded-xl pl-9 pr-3 py-2.5 focus:outline-none focus:border-blue-500 font-medium"
               />
             </div>
 
@@ -567,7 +567,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
           <div>
             {/* Status Filter Chips */}
             <div className="flex items-center gap-2 py-3 overflow-x-auto no-scrollbar">
-              <span className="text-xs text-slate-400 font-semibold flex items-center gap-1 mr-2">
+              <span className="text-xs text-slate-500 font-bold flex items-center gap-1 mr-2">
                 <Filter size={13} />
                 Filter:
               </span>
@@ -590,10 +590,10 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     statusFilter === f.key
                       ? f.special
                         ? 'bg-rose-600 text-white animate-pulse ring-2 ring-rose-400'
-                        : 'bg-blue-600 text-white'
+                        : 'bg-blue-600 text-white shadow-sm'
                       : f.special
-                      ? 'bg-rose-950/60 text-rose-300 border border-rose-800 hover:bg-rose-900'
-                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800'
+                      ? 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 font-bold'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200 font-semibold'
                   }`}
                 >
                   {f.label}
@@ -602,10 +602,10 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
             </div>
 
             {/* Invoices Table */}
-            <div className="overflow-x-auto mt-2">
+            <div className="overflow-x-auto mt-2 rounded-xl border border-slate-200">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase bg-slate-950/50">
+                  <tr className="border-b border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider bg-slate-100/90">
                     <th className="py-3.5 px-4 align-middle w-[20%]">Invoice # & Client</th>
                     <th className="py-3.5 px-4 align-middle w-[18%]">Project</th>
                     <th className="py-3.5 px-4 align-middle w-[15%]">Due Date</th>
@@ -615,10 +615,10 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     <th className="py-3.5 px-4 align-middle text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-xs align-middle">
+                <tbody className="divide-y divide-slate-200 text-xs align-middle bg-white">
                   {filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-slate-500">
+                      <td colSpan={7} className="text-center py-8 text-slate-500 font-medium">
                         No invoices match the selected filter.
                       </td>
                     </tr>
@@ -630,23 +630,23 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       return (
                         <tr
                           key={inv.id}
-                          className={`hover:bg-slate-800/40 transition-colors ${
+                          className={`hover:bg-slate-50 transition-colors ${
                             urgency === 'OVERDUE'
-                              ? 'bg-rose-950/20'
+                              ? 'bg-rose-50/70'
                               : urgency === 'DUE_SOON'
-                              ? 'bg-amber-950/20'
+                              ? 'bg-amber-50/70'
                               : ''
                           }`}
                         >
                           {/* Invoice # & Client */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-white font-mono text-sm">
+                            <div className="font-bold text-slate-900 font-mono text-sm">
                               {inv.invoiceNumber}
                             </div>
-                            <div className="text-slate-300 font-medium">{inv.clientName}</div>
-                            <div className="text-[10px] text-slate-500">{inv.clientEmail}</div>
+                            <div className="text-slate-800 font-bold mt-0.5">{inv.clientName}</div>
+                            <div className="text-[10px] text-slate-500 font-medium">{inv.clientEmail}</div>
                             {inv.departmentCategory && (
-                              <span className="inline-block mt-1 text-[9px] font-bold text-blue-300 bg-blue-950/80 border border-blue-800/60 px-1.5 py-0.5 rounded">
+                              <span className="inline-block mt-1 text-[9px] font-extrabold text-blue-800 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
                                 Dept: {inv.departmentCategory}
                               </span>
                             )}
@@ -654,28 +654,28 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                           {/* Project */}
                           <td className="py-3.5 px-4">
-                            <div className="text-slate-200 font-medium max-w-[180px] truncate">
+                            <div className="text-slate-900 font-semibold max-w-[180px] truncate">
                               {inv.projectName}
                             </div>
-                            <div className="text-[10px] text-blue-400">
+                            <div className="text-[10px] text-blue-600 font-semibold mt-0.5">
                               Issued: {inv.issueDate}
                             </div>
                           </td>
 
                           {/* Due Date & Days Count */}
                           <td className="py-3.5 px-4">
-                            <div className="font-semibold text-slate-200 flex items-center gap-1.5">
-                              <Calendar size={13} className="text-slate-400" />
+                            <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                              <Calendar size={13} className="text-slate-500" />
                               {inv.dueDate}
                             </div>
                             {inv.status !== 'Paid' && (
                               <div
                                 className={`text-[10px] font-bold mt-0.5 ${
                                   daysLeft < 0
-                                    ? 'text-rose-400'
+                                    ? 'text-rose-600'
                                     : daysLeft <= 3
-                                    ? 'text-amber-400'
-                                    : 'text-slate-400'
+                                    ? 'text-amber-600'
+                                    : 'text-slate-500'
                                 }`}
                               >
                                 {daysLeft < 0
@@ -688,18 +688,18 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                           </td>
 
                           {/* Total Amount */}
-                          <td className="py-3.5 px-4 font-bold text-white font-mono text-sm">
+                          <td className="py-3.5 px-4 font-black text-slate-900 font-mono text-sm">
                             {formatCurrency(inv.amountTotal)}
                           </td>
 
                           {/* Paid vs Pending Breakdown */}
                           <td className="py-3.5 px-4">
-                            <div className="text-emerald-400 font-medium">
+                            <div className="text-emerald-700 font-bold text-xs">
                               Paid: {formatCurrency(inv.amountPaid)}
                             </div>
                             <div
-                              className={`font-bold font-mono ${
-                                inv.amountPending > 0 ? 'text-amber-400' : 'text-slate-500'
+                              className={`font-bold font-mono text-xs ${
+                                inv.amountPending > 0 ? 'text-rose-600' : 'text-slate-400'
                               }`}
                             >
                               Pending: {formatCurrency(inv.amountPending)}
@@ -717,14 +717,14 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               )}
 
                               <span
-                                className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
                                   inv.status === 'Paid'
-                                    ? 'bg-emerald-900/60 text-emerald-300 border border-emerald-700/50'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                     : inv.status === 'Overdue'
-                                    ? 'bg-rose-950 text-rose-300 border border-rose-600/80 animate-pulse'
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-300 animate-pulse'
                                     : inv.status === 'Partial'
-                                    ? 'bg-indigo-900/60 text-indigo-300 border border-indigo-700/50'
-                                    : 'bg-amber-900/60 text-amber-300 border border-amber-700/50'
+                                    ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-300'
                                 }`}
                               >
                                 {inv.status}
@@ -734,11 +734,11 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                           {/* Actions */}
                           <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex items-center justify-end gap-1.5">
                               {inv.amountPending > 0 && (
                                 <button
                                   onClick={() => handleOpenPaymentModal(inv)}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow"
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
                                 >
                                   <DollarSign size={13} />
                                   Record Payment
@@ -747,7 +747,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                               <button
                                 onClick={() => onPrintInvoice(inv)}
-                                className="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1"
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
                                 title="View & Print Official Invoice"
                               >
                                 <Printer size={13} />
@@ -759,7 +759,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                                 <>
                                   <button
                                     onClick={() => handleOpenEditModal(inv)}
-                                    className="bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
+                                    className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-2.5 py-1.5 rounded-lg text-xs font-extrabold transition-colors flex items-center gap-1 shadow-sm"
                                     title="Founder Override: Edit Billed Invoice, Dates & Amounts"
                                   >
                                     <Edit2 size={13} />
@@ -768,7 +768,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                                   {onDeleteInvoice && (
                                     <button
                                       onClick={() => setInvoiceToDelete(inv)}
-                                      className="bg-rose-950 hover:bg-rose-900 text-rose-300 px-2 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 border border-rose-800"
+                                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 border border-rose-200"
                                       title="Delete Invoice"
                                     >
                                       <Trash2 size={13} />
@@ -777,11 +777,11 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                                 </>
                               ) : (
                                 <span 
-                                  className="bg-slate-900/90 text-slate-400 border border-slate-800 px-2 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 cursor-not-allowed select-none"
+                                  className="bg-slate-100 text-slate-500 border border-slate-200 px-2 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1 cursor-not-allowed select-none"
                                   title="Locked: Only Founder can modify issued invoice dates, amounts, or payment entries after billing"
                                 >
-                                  <Lock size={12} className="text-amber-400" />
-                                  Billed Data Locked
+                                  <Lock size={12} className="text-amber-500" />
+                                  Locked
                                 </span>
                               )}
                             </div>
@@ -796,14 +796,14 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
           </div>
         ) : (
           /* Ledger Table */
-          <div className="overflow-x-auto mt-4">
-            <h4 className="text-sm font-bold text-slate-200 mb-3 flex items-center gap-2">
-              <BookOpen size={16} className="text-blue-400" />
+          <div className="overflow-x-auto mt-4 rounded-xl border border-slate-200">
+            <h4 className="text-sm font-bold text-slate-900 p-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+              <BookOpen size={16} className="text-blue-600" />
               Company Revenue & Transaction Ledger Log
             </h4>
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 text-slate-400 text-xs font-semibold uppercase bg-slate-950/50">
+                <tr className="border-b border-slate-200 text-slate-700 text-xs font-bold uppercase tracking-wider bg-slate-100">
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Client / Account</th>
                   <th className="py-3 px-4">Description</th>
@@ -812,27 +812,27 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                   <th className="py-3 px-4 text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 text-xs text-slate-300">
+              <tbody className="divide-y divide-slate-200 text-xs text-slate-800 bg-white">
                 {ledger.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-800/30">
-                    <td className="py-3 px-4 font-mono">{item.date}</td>
-                    <td className="py-3 px-4 font-bold text-white">{item.clientName}</td>
-                    <td className="py-3 px-4 text-slate-300">{item.description}</td>
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="py-3 px-4 font-mono text-slate-600">{item.date}</td>
+                    <td className="py-3 px-4 font-bold text-slate-900">{item.clientName}</td>
+                    <td className="py-3 px-4 text-slate-700">{item.description}</td>
                     <td className="py-3 px-4">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
                           item.type.includes('Credit')
-                            ? 'bg-emerald-900/60 text-emerald-300'
-                            : 'bg-rose-900/60 text-rose-300'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : 'bg-rose-100 text-rose-800 border border-rose-300'
                         }`}
                       >
                         {item.type}
                       </span>
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">{item.referenceNo}</td>
+                    <td className="py-3 px-4 font-mono text-slate-500">{item.referenceNo}</td>
                     <td
-                      className={`py-3 px-4 text-right font-mono font-bold text-sm ${
-                        item.type.includes('Credit') ? 'text-emerald-400' : 'text-rose-400'
+                      className={`py-3 px-4 text-right font-mono font-black text-sm ${
+                        item.type.includes('Credit') ? 'text-emerald-700' : 'text-rose-700'
                       }`}
                     >
                       {item.type.includes('Credit') ? '+' : '-'} {formatCurrency(item.amount)}
@@ -847,37 +847,37 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
       {/* Record Payment Modal */}
       {paymentModalInvoice && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <h3 className="text-base font-bold text-emerald-400 flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 text-slate-900 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-bold text-emerald-700 flex items-center gap-2">
                 <DollarSign size={18} />
                 Record Client Payment
               </h3>
               <button
                 onClick={() => setPaymentModalInvoice(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700 font-bold"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handlePaymentSubmit} className="space-y-4">
-              <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs">
-                <p className="text-slate-400">Invoice Number:</p>
-                <p className="font-mono font-bold text-white">{paymentModalInvoice.invoiceNumber}</p>
-                <p className="text-slate-400 mt-1">Client Name:</p>
-                <p className="font-bold text-slate-200">{paymentModalInvoice.clientName}</p>
-                <div className="flex justify-between mt-2 pt-2 border-t border-slate-800">
-                  <span className="text-slate-400">Current Outstanding:</span>
-                  <span className="font-mono font-bold text-amber-400">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs">
+                <p className="text-slate-500 font-medium">Invoice Number:</p>
+                <p className="font-mono font-bold text-slate-900">{paymentModalInvoice.invoiceNumber}</p>
+                <p className="text-slate-500 font-medium mt-1">Client Name:</p>
+                <p className="font-bold text-slate-800">{paymentModalInvoice.clientName}</p>
+                <div className="flex justify-between mt-2 pt-2 border-t border-slate-200">
+                  <span className="text-slate-600 font-medium">Current Outstanding:</span>
+                  <span className="font-mono font-bold text-rose-600">
                     {formatCurrency(paymentModalInvoice.amountPending)}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Payment Amount Received (₹)
                 </label>
                 <input
@@ -887,18 +887,18 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                   max={paymentModalInvoice.amountPending}
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 text-sm font-mono font-bold text-emerald-400 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-white border border-slate-300 text-sm font-mono font-bold text-emerald-700 rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Payment Method
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2.5"
+                  className="w-full bg-white border border-slate-300 text-xs font-bold text-slate-800 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-600"
                 >
                   <option value="Bank Transfer (NEFT)">Bank Transfer (NEFT)</option>
                   <option value="RTGS Transfer">RTGS Transfer</option>
@@ -909,7 +909,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
                   Reference / UTR / Transaction No.
                 </label>
                 <input
@@ -917,21 +917,22 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                   required
                   value={paymentRef}
                   onChange={(e) => setPaymentRef(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                  placeholder="e.g. UTR1234567890"
+                  className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-slate-900 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setPaymentModalInvoice(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md"
                 >
                   Submit Payment
                 </button>
@@ -943,19 +944,19 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
       {/* Generate New Invoice Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 text-slate-900 shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Plus size={18} className="text-blue-400" />
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Plus size={18} className="text-blue-600" />
                   Generate Comprehensive Invoice Form
                 </h3>
-                <p className="text-[11px] text-slate-400">Specify client contact, department services, rate customization, GST & authorized billing details</p>
+                <p className="text-[11px] text-slate-500 font-medium">Specify client contact, department services, rate customization, GST & authorized billing details</p>
               </div>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-slate-700 font-bold"
               >
                 ✕
               </button>
@@ -963,16 +964,16 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
             <form onSubmit={handleCreateInvoice} className="space-y-4">
               {/* Section 1: Client & Contact Person Details */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
                   <User size={14} />
                   Client & Contact Information
                 </h4>
                 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Contact Person Name <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Contact Person Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -980,13 +981,13 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. Vikramaditya Sharma"
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Company / Organization Name <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Company / Organization Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -994,14 +995,14 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. Apex Global Technologies Pvt Ltd"
                       value={newClientCompany}
                       onChange={(e) => setNewClientCompany(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client Email Address
                     </label>
                     <input
@@ -1009,12 +1010,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. billing@apexglobal.com"
                       value={newClientEmail}
                       onChange={(e) => setNewClientEmail(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Website / URL (if available)
                     </label>
                     <input
@@ -1022,14 +1023,14 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. https://apexglobal.com"
                       value={newClientUrl}
                       onChange={(e) => setNewClientUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Office / Billing Address
                     </label>
                     <input
@@ -1037,12 +1038,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. Plot 42, Sector 44, Cyber City, Gurugram"
                       value={newClientAddress}
                       onChange={(e) => setNewClientAddress(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client GSTIN / Tax Identification
                     </label>
                     <input
@@ -1050,19 +1051,19 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. 07AACCA1234F1Z5"
                       value={newClientGstin}
                       onChange={(e) => setNewClientGstin(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono text-white rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-amber-300 mb-1">
-                    🏢 TopRank Agency Branch Address (Printed on Invoice Header) <span className="text-rose-400">*</span>
+                  <label className="block text-[11px] font-bold text-amber-800 mb-1">
+                    🏢 TopRank Agency Branch Address (Printed on Invoice Header) <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={newAgencyBranch}
                     onChange={(e) => setNewAgencyBranch(e.target.value as 'Chandigarh' | 'Lucknow')}
-                    className="w-full bg-slate-900 border border-amber-500/50 text-xs text-amber-200 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+                    className="w-full bg-white border border-amber-300 text-xs text-amber-900 font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
                   >
                     <option value="Chandigarh">
                       📍 Chandigarh Branch: Shop No. 8, Sector 34B, Sector 34, Chandigarh, 160022
@@ -1075,16 +1076,16 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Section 2: Department, Project Scope, Billed Employee & Referral Dropdown */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
                   <Building size={14} />
                   Project Scope, Staff Biller & Referral Source
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Project Title / Campaign Name <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Project Title / Campaign Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1092,18 +1093,18 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="e.g. Mobile App Development & Ads Retainer Q3"
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 placeholder:text-slate-400"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Assigned Employee / Billing Lead <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Assigned Employee / Billing Lead <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={selectedBilledEmpId}
                       onChange={(e) => setSelectedBilledEmpId(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-semibold"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-semibold"
                     >
                       <option value="">-- Choose Staff Biller --</option>
                       {employees.map((emp) => (
@@ -1117,13 +1118,13 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Primary Department Category <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Primary Department Category <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={newDepartmentCategory}
                       onChange={(e) => setNewDepartmentCategory(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-semibold"
                     >
                       <option value="Ads">Ads (Google, Meta, PPC)</option>
                       <option value="Website">Website Development & SEO</option>
@@ -1135,7 +1136,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Payment Due Date
                     </label>
                     <input
@@ -1143,15 +1144,15 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       required
                       value={newDueDate}
                       onChange={(e) => setNewDueDate(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-semibold"
                     />
                   </div>
                 </div>
 
                 {/* Referred By Dropdown Section */}
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1">
+                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
                       <span>Referred By (Partner / Employee / Client)</span>
                     </label>
                     <div className="flex items-center gap-2 text-[10px]">
@@ -1159,7 +1160,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         type="button"
                         onClick={() => setReferredByType('EMPLOYEE')}
                         className={`px-2 py-0.5 rounded font-bold transition-all ${
-                          referredByType === 'EMPLOYEE' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                          referredByType === 'EMPLOYEE' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
                         Employee
@@ -1168,7 +1169,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         type="button"
                         onClick={() => setReferredByType('CLIENT')}
                         className={`px-2 py-0.5 rounded font-bold transition-all ${
-                          referredByType === 'CLIENT' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                          referredByType === 'CLIENT' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
                         Client
@@ -1177,7 +1178,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         type="button"
                         onClick={() => setReferredByType('CUSTOM')}
                         className={`px-2 py-0.5 rounded font-bold transition-all ${
-                          referredByType === 'CUSTOM' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400'
+                          referredByType === 'CUSTOM' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
                         Custom Text
@@ -1189,7 +1190,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     <select
                       value={selectedRefEmp}
                       onChange={(e) => setSelectedRefEmp(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-semibold"
                     >
                       <option value="">-- Choose Referring Employee --</option>
                       {employees.map((emp) => (
@@ -1204,7 +1205,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     <select
                       value={selectedRefClient}
                       onChange={(e) => setSelectedRefClient(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-semibold"
                     >
                       <option value="">-- Choose Referring Client --</option>
                       {uniqueClients.map((client, idx) => (
@@ -1221,34 +1222,34 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       placeholder="Type referral source name (e.g. Siddharth Verma - External Partner)"
                       value={customRefText}
                       onChange={(e) => setCustomRefText(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-blue-600 font-medium placeholder:text-slate-400"
                     />
                   )}
                 </div>
               </div>
 
               {/* Section 3: Dynamic Service Dropdown & Customized Rates */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
                       <FileText size={14} />
                       Services Dropdown & Custom Pricing
                     </h4>
-                    <p className="text-[10px] text-slate-400">Pick pre-configured services from catalog or type custom pricing</p>
+                    <p className="text-[10px] text-slate-500 font-medium">Pick pre-configured services from catalog or type custom pricing</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setShowServiceModal(true)}
-                      className="text-[10px] bg-purple-950 text-purple-300 border border-purple-800/80 hover:bg-purple-900 px-2 py-1 rounded-lg font-bold flex items-center gap-1"
+                      className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors"
                     >
                       <Plus size={11} /> + Create Service
                     </button>
                     <button
                       type="button"
                       onClick={() => setItemsList([...itemsList, { id: `item-${Date.now()}`, description: '', department: newDepartmentCategory, qty: 1, unitPrice: 25000 }])}
-                      className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/80 hover:bg-emerald-900 px-2 py-1 rounded-lg font-bold flex items-center gap-1"
+                      className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-colors"
                     >
                       <Plus size={11} /> + Add Line Item
                     </button>
@@ -1257,11 +1258,11 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                 <div className="space-y-2.5">
                   {itemsList.map((item, idx) => (
-                    <div key={item.id || idx} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div key={item.id || idx} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
                       <div className="grid grid-cols-12 gap-2 items-center">
                         {/* Service Dropdown Selection */}
                         <div className="col-span-12 md:col-span-6">
-                          <label className="block text-[10px] font-bold text-slate-400 mb-0.5">
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
                             Select Service from Catalog:
                           </label>
                           <select
@@ -1283,7 +1284,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               }
                               setItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs text-slate-900 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-600 font-semibold"
                           >
                             <option value="">-- Choose Agency Service Dropdown --</option>
                             {services.map((srv) => (
@@ -1296,7 +1297,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         </div>
 
                         <div className="col-span-12 md:col-span-6">
-                          <label className="block text-[10px] font-bold text-slate-400 mb-0.5">
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
                             Line Item Description / Title:
                           </label>
                           <input
@@ -1309,14 +1310,14 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].description = e.target.value;
                               setItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs text-slate-900 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-600 font-medium"
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-12 gap-2 items-center">
                         <div className="col-span-4">
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Category</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Category</label>
                           <select
                             value={item.department}
                             onChange={(e) => {
@@ -1324,7 +1325,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].department = e.target.value;
                               setItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-slate-200 rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs text-slate-900 rounded-lg px-2 py-1.5 font-medium"
                           >
                             <option value="Ads">Ads</option>
                             <option value="Website">Website</option>
@@ -1336,7 +1337,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         </div>
 
                         <div className="col-span-3">
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Quantity</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Quantity</label>
                           <input
                             type="number"
                             min={1}
@@ -1347,12 +1348,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].qty = Number(e.target.value);
                               setItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-center text-white rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-center text-slate-900 rounded-lg px-2 py-1.5"
                           />
                         </div>
 
                         <div className="col-span-4">
-                          <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Custom Price Rate (₹)</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Custom Price Rate (₹)</label>
                           <input
                             type="number"
                             min={0}
@@ -1363,7 +1364,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].unitPrice = Number(e.target.value);
                               setItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 font-bold rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs font-mono text-emerald-700 font-extrabold rounded-lg px-2 py-1.5"
                           />
                         </div>
 
@@ -1372,7 +1373,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                             <button
                               type="button"
                               onClick={() => setItemsList(itemsList.filter((_, i) => i !== idx))}
-                              className="text-rose-400 hover:text-rose-300 font-bold text-xs"
+                              className="text-rose-600 hover:text-rose-800 font-bold text-xs p-1"
                             >
                               ✕
                             </button>
@@ -1385,15 +1386,15 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Section 4: Discount %, GST % & Billing Authority Tag */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck size={14} />
                   Discount, GST & Signatory Stamp Approval
                 </h4>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Discount in %
                     </label>
                     <input
@@ -1402,12 +1403,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       max={100}
                       value={newDiscountPercent}
                       onChange={(e) => setNewDiscountPercent(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-emerald-700 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       GST Rate (%)
                     </label>
                     <input
@@ -1416,12 +1417,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       max={28}
                       value={newGstPercent}
                       onChange={(e) => setNewGstPercent(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-blue-400 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-blue-700 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Signatory Tag Header
                     </label>
                     <input
@@ -1429,13 +1430,13 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       value={newBillingAuthority}
                       onChange={(e) => setNewBillingAuthority(e.target.value)}
                       placeholder="e.g. Rajesh Malhotra — Director of Billing"
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-between border-t border-slate-900 text-xs">
-                  <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                <div className="pt-2 flex items-center justify-between border-t border-slate-200 text-xs">
+                  <label className="flex items-center gap-2 text-slate-700 font-semibold cursor-pointer">
                     <input
                       type="checkbox"
                       checked={newIncludeSignature}
@@ -1448,17 +1449,17 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Form Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
                 >
                   <Plus size={14} />
                   Generate Invoice Form
@@ -1471,21 +1472,21 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
       {/* Edit Billed Invoice Modal (Full Editing Capabilities) */}
       {editingInvoice && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-amber-500/50 rounded-2xl max-w-3xl w-full p-6 text-white shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full p-6 text-slate-900 shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
+                <h3 className="text-base font-bold text-amber-700 flex items-center gap-2">
                   <Edit2 size={18} />
                   Edit Invoice #{editingInvoice.invoiceNumber}
                 </h3>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500 font-medium">
                   Update any field: client info, branch address, deliverables, taxes, referral, signature stamp & status.
                 </p>
               </div>
               <button
                 onClick={() => setEditingInvoice(null)}
-                className="text-slate-400 hover:text-white font-bold text-lg"
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg"
               >
                 ✕
               </button>
@@ -1493,99 +1494,99 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
             <form onSubmit={handleSaveInvoiceEdit} className="space-y-4">
               {/* Section 1: Client & Agency Branch Information */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
                   <User size={14} />
                   1. Client & Agency Branch Info
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Client Full Name <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Client Full Name <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={editClientName}
                       onChange={(e) => setEditClientName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Company Name / Brand
                     </label>
                     <input
                       type="text"
                       value={editClientCompany}
                       onChange={(e) => setEditClientCompany(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client Email Address
                     </label>
                     <input
                       type="email"
                       value={editClientEmail}
                       onChange={(e) => setEditClientEmail(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client GSTIN Number
                     </label>
                     <input
                       type="text"
                       value={editClientGstin}
                       onChange={(e) => setEditClientGstin(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client Office Address
                     </label>
                     <input
                       type="text"
                       value={editClientAddress}
                       onChange={(e) => setEditClientAddress(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Client Website URL
                     </label>
                     <input
                       type="text"
                       value={editClientUrl}
                       onChange={(e) => setEditClientUrl(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-amber-300 mb-1">
-                    🏢 TopRank Agency Branch Address (Printed on Invoice) <span className="text-rose-400">*</span>
+                  <label className="block text-[11px] font-bold text-amber-800 mb-1">
+                    🏢 TopRank Agency Branch Address (Printed on Invoice) <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={editAgencyBranch}
                     onChange={(e) => setEditAgencyBranch(e.target.value as 'Chandigarh' | 'Lucknow')}
-                    className="w-full bg-slate-900 border border-amber-500/50 text-xs text-amber-200 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-400"
+                    className="w-full bg-white border border-amber-300 text-xs text-amber-900 font-bold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
                   >
                     <option value="Chandigarh">
                       📍 Chandigarh Branch: Shop No. 8, Sector 34B, Sector 34, Chandigarh, 160022
@@ -1598,34 +1599,34 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Section 2: Department, Project Scope, Dates & Referral */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
                   <FileText size={14} />
                   2. Campaign Scope & Dates
                 </h4>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Project Scope Title <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Project Scope Title <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={editProjectName}
                       onChange={(e) => setEditProjectName(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Department Category
                     </label>
                     <select
                       value={editDepartmentCategory}
                       onChange={(e) => setEditDepartmentCategory(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     >
                       <option value="Ads">Ads (Google & Meta PPC)</option>
                       <option value="Website">Website & SEO</option>
@@ -1639,33 +1640,33 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Issue Date <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Issue Date <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="date"
                       required
                       value={editIssueDate}
                       onChange={(e) => setEditIssueDate(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Payment Due Date <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Payment Due Date <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="date"
                       required
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Referred By Partner
                     </label>
                     <input
@@ -1673,16 +1674,16 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       value={editReferredBy}
                       onChange={(e) => setEditReferredBy(e.target.value)}
                       placeholder="e.g. Employee or Client Referral"
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Section 3: Deliverables & Items Breakdown */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
                     <Sparkles size={14} />
                     3. Billed Deliverables & Line Items ({editItemsList.length})
                   </h4>
@@ -1701,7 +1702,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         },
                       ])
                     }
-                    className="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40 text-xs px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1"
+                    className="bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 text-xs px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1"
                   >
                     <Plus size={12} /> Add Line Item
                   </button>
@@ -1709,8 +1710,8 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                 {/* Preset Catalog Insert Option */}
                 {services.length > 0 && (
-                  <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center gap-2 text-xs">
-                    <span className="text-slate-400 font-semibold shrink-0">➕ Quick Insert Catalog Service:</span>
+                  <div className="bg-white p-2.5 rounded-lg border border-slate-200 flex items-center gap-2 text-xs">
+                    <span className="text-slate-600 font-bold shrink-0">➕ Quick Insert Catalog Service:</span>
                     <select
                       onChange={(e) => {
                         const srv = services.find((s) => s.id === e.target.value);
@@ -1730,7 +1731,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         e.target.value = '';
                       }}
                       defaultValue=""
-                      className="bg-slate-950 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2 py-1 text-xs focus:outline-none"
+                      className="bg-slate-50 border border-slate-300 text-amber-800 font-bold rounded-lg px-2 py-1 text-xs focus:outline-none"
                     >
                       <option value="" disabled>-- Select Preset Agency Service --</option>
                       {services.map((srv) => (
@@ -1744,10 +1745,10 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
                 <div className="space-y-2">
                   {editItemsList.map((item, idx) => (
-                    <div key={item.id} className="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div key={item.id} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
                       <div className="grid grid-cols-12 gap-2 items-center">
                         <div className="col-span-5">
-                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Description</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Description</label>
                           <input
                             type="text"
                             required
@@ -1757,12 +1758,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].description = e.target.value;
                               setEditItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs text-slate-900 rounded-lg px-2 py-1.5 font-medium"
                           />
                         </div>
 
                         <div className="col-span-2">
-                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Department</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Department</label>
                           <select
                             value={item.department}
                             onChange={(e) => {
@@ -1770,7 +1771,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].department = e.target.value;
                               setEditItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-[11px] text-white rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-[11px] text-slate-900 rounded-lg px-2 py-1.5 font-medium"
                           >
                             <option value="Ads">Ads</option>
                             <option value="Website">Website</option>
@@ -1782,7 +1783,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                         </div>
 
                         <div className="col-span-2">
-                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Qty</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Qty</label>
                           <input
                             type="number"
                             min={1}
@@ -1792,12 +1793,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].qty = Number(e.target.value);
                               setEditItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-center text-slate-900 rounded-lg px-2 py-1.5"
                           />
                         </div>
 
                         <div className="col-span-2">
-                          <label className="block text-[10px] font-medium text-slate-400 mb-0.5">Rate (₹)</label>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Rate (₹)</label>
                           <input
                             type="number"
                             min={0}
@@ -1807,7 +1808,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                               updated[idx].unitPrice = Number(e.target.value);
                               setEditItemsList(updated);
                             }}
-                            className="w-full bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-400 font-bold rounded-lg px-2 py-1.5"
+                            className="w-full bg-slate-50 border border-slate-300 text-xs font-mono text-emerald-700 font-extrabold rounded-lg px-2 py-1.5"
                           />
                         </div>
 
@@ -1816,7 +1817,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                             <button
                               type="button"
                               onClick={() => setEditItemsList(editItemsList.filter((_, i) => i !== idx))}
-                              className="text-rose-400 hover:text-rose-300 font-bold text-xs"
+                              className="text-rose-600 hover:text-rose-800 font-bold text-xs p-1"
                             >
                               ✕
                             </button>
@@ -1829,15 +1830,15 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Section 4: Discount, GST, Signature, Paid Amount & Status */}
-              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck size={14} />
                   4. Discount, GST, Stamp & Payment Overrides
                 </h4>
 
                 <div className="grid grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Discount (%)
                     </label>
                     <input
@@ -1846,12 +1847,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       max={100}
                       value={editDiscountPercent}
                       onChange={(e) => setEditDiscountPercent(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-emerald-700 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       GST Rate (%)
                     </label>
                     <input
@@ -1860,12 +1861,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       max={28}
                       value={editGstPercent}
                       onChange={(e) => setEditGstPercent(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-blue-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-blue-700 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Amount Paid (₹)
                     </label>
                     <input
@@ -1873,18 +1874,18 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                       min={0}
                       value={editAmountPaid}
                       onChange={(e) => setEditAmountPaid(Number(e.target.value))}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-emerald-700 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
                       Invoice Status
                     </label>
                     <select
                       value={editStatus}
                       onChange={(e) => setEditStatus(e.target.value as InvoiceStatus)}
-                      className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-semibold"
+                      className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600 font-bold"
                     >
                       <option value="Pending">Pending</option>
                       <option value="Partial">Partial</option>
@@ -1895,7 +1896,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Signatory Header Tag
                   </label>
                   <input
@@ -1903,12 +1904,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     value={editBillingAuthority}
                     onChange={(e) => setEditBillingAuthority(e.target.value)}
                     placeholder="e.g. Rajesh Malhotra — Director of Billing"
-                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+                    className="w-full bg-white border border-slate-300 text-xs text-slate-900 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-600 font-medium"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-between border-t border-slate-900 text-xs">
-                  <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                <div className="pt-2 flex items-center justify-between border-t border-slate-200 text-xs">
+                  <label className="flex items-center gap-2 text-slate-700 font-semibold cursor-pointer">
                     <input
                       type="checkbox"
                       checked={editIncludeSignature}
@@ -1921,17 +1922,17 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
               </div>
 
               {/* Form Action Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setEditingInvoice(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
+                  className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
                 >
                   <CheckCircle size={14} />
                   Save Billed Invoice Edits
@@ -1944,43 +1945,43 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
       {/* Delete Invoice Confirmation Modal */}
       {invoiceToDelete && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-500/50 rounded-2xl max-w-md w-full p-6 text-white shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
-              <h3 className="text-base font-bold text-rose-400 flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-rose-200 rounded-2xl max-w-md w-full p-6 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-base font-bold text-rose-700 flex items-center gap-2">
                 <Trash2 size={18} />
                 Delete Invoice Confirmation
               </h3>
               <button
                 onClick={() => setInvoiceToDelete(null)}
-                className="text-slate-400 hover:text-white font-bold text-lg"
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg"
               >
                 ✕
               </button>
             </div>
 
             <div className="space-y-3 text-xs">
-              <p className="text-slate-300">
+              <p className="text-slate-600 font-medium">
                 Are you sure you want to permanently delete this invoice? This action will remove the record from billing and financials.
               </p>
 
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
-                <p className="font-mono font-bold text-white text-sm">
-                  Invoice #: <span className="text-blue-400">{invoiceToDelete.invoiceNumber}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1.5">
+                <p className="font-mono font-bold text-slate-900 text-sm">
+                  Invoice #: <span className="text-blue-700">{invoiceToDelete.invoiceNumber}</span>
                 </p>
-                <p className="text-slate-300 font-medium">Client: {invoiceToDelete.clientName}</p>
-                <p className="text-slate-300 font-medium">Project: {invoiceToDelete.projectName}</p>
-                <p className="text-emerald-400 font-mono font-bold pt-1">
+                <p className="text-slate-700 font-medium">Client: {invoiceToDelete.clientName}</p>
+                <p className="text-slate-700 font-medium">Project: {invoiceToDelete.projectName}</p>
+                <p className="text-emerald-700 font-mono font-extrabold pt-1">
                   Total Billed: {formatCurrency(invoiceToDelete.amountTotal)}
                 </p>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800 mt-5">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 mt-5">
               <button
                 type="button"
                 onClick={() => setInvoiceToDelete(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors"
               >
                 Cancel
               </button>
@@ -1992,7 +1993,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                   }
                   setInvoiceToDelete(null);
                 }}
-                className="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-lg flex items-center gap-1.5"
+                className="bg-rose-600 hover:bg-rose-500 text-white px-5 py-2 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
               >
                 <Trash2 size={14} />
                 Yes, Delete Invoice
@@ -2004,37 +2005,37 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
       {/* Admin Manage & Create Services Catalog Modal */}
       {showServiceModal && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-purple-500/40 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-purple-200 rounded-2xl max-w-2xl w-full p-6 text-slate-900 shadow-2xl my-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div>
-                <h3 className="text-base font-bold text-purple-300 flex items-center gap-2">
-                  <Settings size={18} className="text-purple-400" />
+                <h3 className="text-base font-bold text-purple-800 flex items-center gap-2">
+                  <Settings size={18} className="text-purple-600" />
                   Admin Agency Services Catalog & Pricing
                 </h3>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-500 font-medium">
                   Create agency services stored in Supabase. These automatically populate the invoice generator dropdown.
                 </p>
               </div>
               <button
                 onClick={() => setShowServiceModal(false)}
-                className="text-slate-400 hover:text-white font-bold text-lg"
+                className="text-slate-400 hover:text-slate-700 font-bold text-lg"
               >
                 ✕
               </button>
             </div>
 
             {/* Create Service Form */}
-            <form onSubmit={handleCreateService} className="bg-slate-950 p-4 rounded-xl border border-purple-900/40 space-y-3 mb-5">
-              <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={14} className="text-purple-400" />
+            <form onSubmit={handleCreateService} className="bg-purple-50/50 p-4 rounded-xl border border-purple-200 space-y-3 mb-5">
+              <h4 className="text-xs font-bold text-purple-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles size={14} className="text-purple-600" />
                 + Create New Agency Service (Stores to Supabase)
               </h4>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    Service Name / Title <span className="text-rose-400">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Service Name / Title <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -2042,18 +2043,18 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     placeholder="e.g. AI Chatbot Integration Sprint"
                     value={srvName}
                     onChange={(e) => setSrvName(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600 placeholder:text-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    Department Category <span className="text-rose-400">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Department Category <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={srvDept}
                     onChange={(e) => setSrvDept(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-semibold rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"
                   >
                     <option value="Ads">Ads (Google & Meta PPC)</option>
                     <option value="Website">Website & SEO</option>
@@ -2067,8 +2068,8 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                    Default Rate Price (₹) <span className="text-rose-400">*</span>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Default Rate Price (₹) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -2077,12 +2078,12 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     placeholder="e.g. 75000"
                     value={srvPrice}
                     onChange={(e) => setSrvPrice(Number(e.target.value))}
-                    className="w-full bg-slate-900 border border-slate-800 text-xs font-mono font-bold text-emerald-400 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white border border-slate-300 text-xs font-mono font-bold text-emerald-700 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
                     Service Description
                   </label>
                   <input
@@ -2090,7 +2091,7 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                     placeholder="Brief scope summary"
                     value={srvDesc}
                     onChange={(e) => setSrvDesc(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-white border border-slate-300 text-xs text-slate-900 font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -2108,8 +2109,8 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
 
             {/* List of Existing Services */}
             <div>
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <BookOpen size={14} className="text-blue-400" />
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <BookOpen size={14} className="text-blue-600" />
                 Active Services Catalog ({services.length})
               </h4>
 
@@ -2117,21 +2118,21 @@ export const ClientFinancialsLedger: React.FC<ClientFinancialsLedgerProps> = ({
                 {services.map((srv) => (
                   <div
                     key={srv.id}
-                    className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between"
+                    className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs text-white">{srv.name}</span>
-                        <span className="bg-purple-950 text-purple-300 text-[10px] px-2 py-0.5 rounded font-semibold border border-purple-800/60">
+                        <span className="font-bold text-xs text-slate-900">{srv.name}</span>
+                        <span className="bg-purple-100 text-purple-800 text-[10px] px-2 py-0.5 rounded font-bold border border-purple-200">
                           {srv.department}
                         </span>
                       </div>
                       {srv.description && (
-                        <p className="text-[11px] text-slate-400 mt-0.5">{srv.description}</p>
+                        <p className="text-[11px] text-slate-500 font-medium mt-0.5">{srv.description}</p>
                       )}
                     </div>
                     <div className="text-right">
-                      <span className="text-emerald-400 font-mono font-bold text-xs">
+                      <span className="text-emerald-700 font-mono font-bold text-xs">
                         ₹{srv.defaultPrice?.toLocaleString('en-IN')}
                       </span>
                     </div>
